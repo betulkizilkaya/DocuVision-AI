@@ -1,22 +1,24 @@
-import pdfplumber
+import pdfplumber #PDF’ten metin çıkarmak
 import sqlite3
-import logging
-from hashlib import sha256
-from pathlib import Path
+import logging #Gereksiz uyarıları susturmak için
+from hashlib import sha256 #Dosyanın benzersiz “parmak izini” (hash) hesaplıyor
+from pathlib import Path #Dosya yollarını platformdan bağımsız yönetiyor.
 
 # Sadece hata mesajlarını göster (pdfminer uyarıları susar)
 logging.getLogger("pdfminer").setLevel(logging.ERROR)
 logging.getLogger("pdfplumber").setLevel(logging.ERROR)
 
-#Yol ayarları
+#Proje yapısına göre otomatik olarak yolları bulur
 APP_DIR  = Path(__file__).resolve().parent
 ROOT_DIR = APP_DIR.parent
 DATA_DIR = ROOT_DIR / "data"
 DB_PATH  = ROOT_DIR / "db" / "corpus.sqlite"
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-#Dosya içeriğinden SHA256 üret.
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)#Eğer db/ klasörü yoksa otomatik oluşturur.
+
+#dosya parmak izi oluşturma
 def sha256_file(path: Path, chunk_size: int = 1 << 20) -> str:
+    #Amaç: aynı isimli ama farklı içerikli dosyaları ayırt edebilmek.
     h = sha256()
     with path.open("rb") as f:
         while True:
@@ -28,30 +30,33 @@ def sha256_file(path: Path, chunk_size: int = 1 << 20) -> str:
 
 def extract_text_lines(pdf_path: Path):
     """
-    PDF'ten metni çıkarır; her satırı (page_no, line_no, text, length) olarak döndürür.
-    20–300 karakter filtresi uygular.
+    PDF'ten metni çıkarıp; her satırı (page_no, line_no, text, length) olarak döndürüyoruz.
+    20–300 karakter filtresi uyguladık.
     """
     rows = []
     with pdfplumber.open(str(pdf_path)) as pdf:
-        for page_no, page in enumerate(pdf.pages, start=1):
-            text = page.extract_text()
+        for page_no, page in enumerate(pdf.pages, start=1):#Her sayfayı açar (page_no 1’den başlar)
+            text = page.extract_text()#extract_text() ile sayfadaki metni alır.
             if not text:
-                continue
-            for line_no, line in enumerate(text.splitlines(), start=1):
-                line = " ".join(line.strip().split())  # fazla boşlukları sadeleştir
-                if 20 <= len(line) <= 300:
-                    rows.append((page_no, line_no, line, len(line)))
+                continue# Eğer sayfa sadece görselse (örneğin tarama), text boş gelir.
+            for line_no, line in enumerate(text.splitlines(), start=1):#splitlines() → satır satır böler.
+                line = " ".join(line.strip().split())# strip() → baş/son boşlukları temizler.
+                if 20 <= len(line) <= 300:# 20 ≤ len(line) ≤ 300 → çok kısa başlıklar ve devasa paragraflar filtrelenir.
+                    rows.append((page_no, line_no, line, len(line)))#Uygun satırlar bu şekilde kaydedilir.
     return rows
 
-def ensure_schema(conn: sqlite3.Connection):
+def ensure_schema(conn: sqlite3.Connection):# tablo yapısı
     cur = conn.cursor()
+    # PDF’nin adı, yolu ve hash değeri
+    # her PDF’ten çıkan satırlar
     cur.executescript("""
-    CREATE TABLE IF NOT EXISTS file_index(
+    CREATE TABLE IF NOT EXISTS file_index( 
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       filename TEXT,
       path TEXT,
       sha256 TEXT
     );
+        
     CREATE TABLE IF NOT EXISTS text_lines(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       file_id INTEGER,
@@ -64,22 +69,24 @@ def ensure_schema(conn: sqlite3.Connection):
       ON file_index(filename, sha256);
     CREATE INDEX IF NOT EXISTS idx_text_file ON text_lines(file_id);
     """)
+    #UNIQUE INDEX → aynı dosyayı iki kez eklemeyi engeller.
+    #INDEX → aramaları hızlandırır.
     conn.commit()
 
-def get_or_create_file(conn: sqlite3.Connection, pdf_path: Path) -> int:
+def get_or_create_file(conn: sqlite3.Connection, pdf_path: Path) -> int:# Dosya kaydını yönetir
     cur = conn.cursor()
     file_hash = sha256_file(pdf_path)
-    # Upsert: varsa atla, yoksa ekle
+    # Eğer aynı isim + aynı hash zaten varsa “IGNORE” eder. Yoksa yeni kayıt ekler.
     cur.execute("""
         INSERT OR IGNORE INTO file_index(filename, path, sha256)
         VALUES (?, ?, ?)
     """, (pdf_path.name, str(pdf_path), file_hash))
-    # id'yi çek
+    # Sonra o PDF’nin id değerini döner
     cur.execute("SELECT id FROM file_index WHERE filename=? AND sha256=?", (pdf_path.name, file_hash))
     return cur.fetchone()[0]
 
 def replace_text_lines(conn: sqlite3.Connection, file_id: int, lines):
-    """Aynı PDF için önce eski satırları siler, sonra yeni satırları ekler (idempotent)."""
+    # Aynı PDF için önce eski satırları siler, sonra yeni satırları ekler/idempotent
     cur = conn.cursor()
     cur.execute("DELETE FROM text_lines WHERE file_id=?", (file_id,))
     if lines:

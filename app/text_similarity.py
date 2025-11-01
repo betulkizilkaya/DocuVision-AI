@@ -8,29 +8,31 @@ import textdistance as td
 from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
 
-# --- Proje yolları ---
+# Proje yolları
 APP_DIR  = Path(__file__).resolve().parent
 ROOT_DIR = APP_DIR.parent
 DB_PATH  = ROOT_DIR / "db" / "corpus.sqlite"
 
-# --- Parametreler ---
 MIN_LEN = 20
-MAX_LEN = 300
-LENGTH_TOL = 10           # |len(a)-len(b)| ≤ 10
-PREFIX_LEN = 2            # aynı ilk 2 harf
-THRESH = 0.90             # eşik
+MAX_LEN = 300 # Satır filtresi
+
+# Bu ikisini gevşetirsek daha çok eşleşme buluruz ama yavaşlar.
+LENGTH_TOL = 10 #Uzunluk toleransı (|len(a)-len(b)| ≤ 10) Metinlerin uzunluğu farklıysa ama anlam aynıysa (ör. küçük ekler) toleransı artırabilirsin
+PREFIX_LEN = 2 #Aynı ilk N harf (bloklama). Düşürürsek hız düşer, recall artar; yükseltirsek hız artar, recall düşer.
+
+THRESH = 0.90 # %90 eşik
 COMPARE_WITHIN_FILE = True
 COMPARE_ACROSS_FILES = True
 
-# --- Yardımcılar ---
 _norm_space = re.compile(r"\s+")
+
 def normalize_text(s: str) -> str:
     s = _norm_space.sub(" ", s.strip())
     return s.lower()
 
 def ensure_schema(conn: sqlite3.Connection):
     cur = conn.cursor()
-    # tablo varsa ek kolonları kontrol et
+    # text_similarity yoksa oluştur
     cur.execute("PRAGMA table_info(text_similarity)")
     cols = {r[1] for r in cur.fetchall()}
     if "text_similarity" not in {t[0] for t in cur.execute("SELECT name FROM sqlite_master WHERE type='table'")}:
@@ -48,15 +50,14 @@ def ensure_schema(conn: sqlite3.Connection):
         );
         """)
     else:
-        # eksik kolonları ekle
+        # Eksik kolonları ekle
         to_add = []
         if "tfidf_cosine" not in cols:    to_add.append("ALTER TABLE text_similarity ADD COLUMN tfidf_cosine REAL;")
         if "passed_threshold" not in cols:to_add.append("ALTER TABLE text_similarity ADD COLUMN passed_threshold INTEGER;")
         for stmt in to_add:
             cur.execute(stmt)
 
-    # hız ve tekillik için index
-    cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_txtsim ON text_similarity(line_id_a, line_id_b)")
+    cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_txtsim ON text_similarity(line_id_a, line_id_b)")# UNIQUE(line_id_a, line_id_b) → aynı çifti iki kere yazmaz.line_id_a < line_id_b kuralıyla yönsüz tekil çift saklanır.
     cur.execute("CREATE INDEX IF NOT EXISTS ix_txtsim_avg ON text_similarity(avg_score)")
     conn.commit()
 
@@ -68,7 +69,7 @@ def load_lines(conn: sqlite3.Connection):
         WHERE length BETWEEN ? AND ?
     """, (MIN_LEN, MAX_LEN))
     rows = cur.fetchall()
-    # normalize
+    # Veritabanından çekip normalize ediyoruz; (line_id, file_id, len, text_norm) listesi hazır.
     items = []
     for (lid, fid, ln, txt) in rows:
         norm = normalize_text(txt)
@@ -81,16 +82,17 @@ def build_buckets(items):
     buckets = {}
     for lid, fid, ln, txt in items:
         prefix = txt[:PREFIX_LEN] if len(txt) >= PREFIX_LEN else txt
-        key = (ln // 10, prefix)
+        key = (ln // 10, prefix) #10 karakterlik uzunluk dilimleri + ilk 2 harf aynı olanlar bir arada.
+        #Böylece yüzbinlerce “alakasız” karşılaştırma yapılmaz.
         buckets.setdefault(key, []).append((lid, fid, ln, txt))
     return buckets
 
 def compute_tfidf(texts):
-    vec = TfidfVectorizer(ngram_range=(1,2), min_df=1)
+    vec = TfidfVectorizer(ngram_range=(1,2), min_df=1)#1-gram ve 2-gram TF-IDF.
     X = vec.fit_transform(texts)  # sparse
     return vec, X
 
-def cosine_from_sparse_row(X, i, j):
+def cosine_from_sparse_row(X, i, j):#iki satırın anlamsal yakınlığı ölçülür.
     # hızlı: X[i] dot X[j]^T
     v = X[i].multiply(X[j]).sum()
     # normlar tf-idf'de 1'e yakın; yine de emniyet:
@@ -155,17 +157,16 @@ def main():
             g_a = global_idx[ia]
             g_b = global_idx[ib]
 
-            # metrikler
-            lev = lev_ratio(txt_a, txt_b) / 100.0            # 0..1
-            jaro = td.jaro_winkler(txt_a, txt_b)             # 0..1
-            dice = td.dice.distance(txt_a, txt_b)
-            dice = 1.0 - dice                                # distance→similarity
-            tfidf = cosine_from_sparse_row(X, g_a, g_b)      # 0..1
+            lev = lev_ratio(txt_a, txt_b) / 100.0            #Levenshtein: edit mesafesi tabanlı oran (yazım farklarına duyarlı).
+            jaro = td.jaro_winkler(txt_a, txt_b)             #Jaro-Winkler: yazım hatalarına esnek, kısa stringlerde iyi.
+            dice = td.dice.distance(txt_a, txt_b)            #Dice: karakter/kelime çifti benzerliği (yapısal).
+            dice = 1.0 - dice
+            tfidf = cosine_from_sparse_row(X, g_a, g_b)      #TF-IDF cosine: anlam temelli (kelime önemine bakar).
 
-            avg = (lev + jaro + dice + tfidf) / 4.0
+            avg = (lev + jaro + dice + tfidf) / 4.0          #avg_score: hepsinin ortalaması → tek güvenilir skor.
             passed = 1 if avg >= THRESH else 0
 
-            if passed:
+            if passed:#Yalnızca %90+ olanlar yazılır.
                 a, b = (lid_a, lid_b) if lid_a < lid_b else (lid_b, lid_a)
                 try:
                     cur.execute("""
@@ -175,7 +176,7 @@ def main():
                     """, (a, b, lev, jaro, dice, tfidf, avg, passed))
                     inserted += 1
                 except sqlite3.IntegrityError:
-                    # UNIQUE ihlali → zaten var, geç
+                    #Tekillik ihlalinde IntegrityError yakalanır ve tekrar yazılmaz.
                     pass
 
         conn.commit()
