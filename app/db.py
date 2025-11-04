@@ -3,8 +3,7 @@ import os
 from pathlib import Path
 
 # Bu dosyanın bulunduğu klasör (örnek: app/)
-# Not: __file__ yerine Path(__file__) kullanmak daha Pythonic'tir.
-APP_DIR = Path(os.path.abspath(__file__)).parent
+APP_DIR = Path(__file__).resolve().parent
 
 # Proje kökü = app'in bir üstü
 ROOT_DIR = APP_DIR.parent
@@ -12,34 +11,24 @@ ROOT_DIR = APP_DIR.parent
 # Veritabanı yolu (app'in dışında, kökte)
 DB_PATH = ROOT_DIR / "db" / "corpus.sqlite"
 
-
 def create_connection(db_file=DB_PATH):
-    # Dizin yoksa oluştur
     os.makedirs(os.path.dirname(db_file), exist_ok=True)
-
-    # Foreign Keys desteği için isolation_level=None kullanıldı
-    conn = sqlite3.connect(db_file, isolation_level=None)
-
-    # Bağlantı açılır açılmaz Foreign Keys kontrolünü aktif et
-    conn.execute("PRAGMA foreign_keys = ON;")
-
+    conn = sqlite3.connect(db_file)
     return conn
 
 
 def create_tables(conn):
     cursor = conn.cursor()
     cursor.executescript("""
-    -- PRAGMA foreign_keys = ON; -- Artık create_connection içinde ayarlandı
-
     -- Betul
     CREATE TABLE IF NOT EXISTS file_index(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        filename TEXT NOT NULL,
+        filename TEXT,
         path TEXT,
-        sha256 TEXT UNIQUE NOT NULL
+        sha256 TEXT   --dosya tekrarını onler
     );
 
-    -- aynı dosya iki kez eklenmesin diye
+    --aynı dosya iki kez eklenmesin diye
     CREATE UNIQUE INDEX IF NOT EXISTS ux_file_name_hash
       ON file_index(filename, sha256);
 
@@ -60,66 +49,51 @@ def create_tables(conn):
         lev_ratio REAL,
         jaro REAL,
         dice REAL,
-        avg_score REAL,
-        FOREIGN KEY (line_id_a) REFERENCES text_lines(id),
-        FOREIGN KEY (line_id_b) REFERENCES text_lines(id),
-        UNIQUE(line_id_a, line_id_b)
+        avg_score REAL
     );
 
     -- Hira
     CREATE TABLE IF NOT EXISTS pdf_images(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        file_id INTEGER NOT NULL,          
+        file_id INTEGER,          
         page_no INTEGER,
         image_index INTEGER,
-        sha256 TEXT UNIQUE NOT NULL,     -- image tekrarını onler
-        blob BLOB,
-        FOREIGN KEY (file_id) REFERENCES file_index(id)
+        sha256 TEXT,     --image tekrarını onler
+        blob BLOB
     );
 
     CREATE TABLE IF NOT EXISTS image_features(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        image_id INTEGER NOT NULL,         
+        image_id INTEGER,         
         width INTEGER,
         height INTEGER,
-        aspect_ratio REAL,        
-        is_square INTEGER,        
-        is_grayscale INTEGER,     
-        top_colors TEXT,           
-        FOREIGN KEY (image_id) REFERENCES pdf_images(id)
+        aspect_ratio REAL,        ----oran hesap
+        is_square INTEGER,        -- %90 kare kurali
+        is_grayscale INTEGER,     -- 1 siyah-beyaz, 0 renkli
+        top_colors TEXT           -- ilk 5 renk (JSON formatında) (SQLite tuple veya list tanımaz)
     );
 
     CREATE TABLE IF NOT EXISTS image_similarity(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        image_id_a INTEGER NOT NULL,
-        image_id_b INTEGER NOT NULL,
+        image_id_a INTEGER,
+        image_id_b INTEGER,
         ssim REAL,
         phash REAL,
         orb REAL,
-        avg_similarity REAL,
-        FOREIGN KEY (image_id_a) REFERENCES pdf_images(id),
-        FOREIGN KEY (image_id_b) REFERENCES pdf_images(id),
-        UNIQUE(image_id_a, image_id_b)
+        avg_similarity REAL
     );
 
     CREATE TABLE IF NOT EXISTS binary_similarity(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        file_id_a INTEGER NOT NULL,        
-        file_id_b INTEGER NOT NULL,        
-        similarity_ratio REAL,     
-        FOREIGN KEY (file_id_a) REFERENCES file_index(id),
-        FOREIGN KEY (file_id_b) REFERENCES file_index(id),
-        UNIQUE(file_id_a, file_id_b)
-    );
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    file_id_a INTEGER,        
+    file_id_b INTEGER,        
+    similarity_ratio REAL,           -- binary düzeyde hesaplanan benzerlik oranı
+    longest_match_size INTEGER,      -- en uzun ortak binary kısmın boyutu (byte)
     """)
     conn.commit()
     print("Tables created successfully")
 
-
-if __name__ == "__main__":
-    try:
-        conn = create_connection()
-        create_tables(conn)
-    finally:
-        if 'conn' in locals() and conn:
-            conn.close()
+if __name__=="__main__":
+    conn = create_connection()
+    create_tables(conn)
+    conn.close()
