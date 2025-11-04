@@ -1,39 +1,71 @@
+<!-- HTML belgesinin başlangıcı -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"> <!-- Sayfanın dili İngilizce olarak ayarlandı -->
 <head>
+    <!-- Karakter kodlaması: UTF-8, Türkçe karakterleri destekler -->
     <meta charset="UTF-8">
+
+    <!-- Tarayıcı sekmesinde görünen başlık -->
     <title>PDF Analysis Project - Selin's Web Interface</title>
 
+    <!-- Google Fonts: Poppins yazı tipini ekler -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5 CSS framework bağlantısı -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- DataTables eklentisi için Bootstrap 5 uyumlu CSS -->
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.min.css">
+
+    <!-- Flask static klasöründeki özel stil dosyası -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <!-- Bootstrap ikon seti -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
-<body>
 
+<body>
+<!-- Ana kapsayıcı: sidebar (sol menü) + sayfa içeriği (sağ taraf) -->
 <div class="d-flex" id="wrapper">
+
+    <!-- Sol taraf: Sidebar -->
     <div class="border-end bg-light sidebar-wrapper" id="sidebar-wrapper">
         <div class="list-group list-group-flush list-group-tablo-menu">
+            <!-- Menü başlığı -->
             <h5 class="sidebar-heading">NEXUS MENU</h5>
 
+            <!-- Sidebar menü yapısı -->
             <ul class="nav flex-column" id="menuAccordion">
+
+                <!-- DATA EXTRACTION KATEGORİSİ -->
                 <li class="nav-item">
-                    <a class="nav-link sidebar-tree-header" data-bs-toggle="collapse" href="#collapseExtraction" role="button" aria-expanded="true">
+                    <!-- Kategori başlığı -->
+                    <a class="nav-link sidebar-tree-header"
+                       data-bs-toggle="collapse"
+                       href="#collapseExtraction"
+                       role="button"
+                       aria-expanded="true">
+                        <!-- İkon + başlık -->
                         <i class="bi bi-file-earmark-text me-2"></i> Data Extraction
                     </a>
+
+                    <!-- Kategori altındaki açılır liste -->
                     <div class="collapse show" id="collapseExtraction" data-bs-parent="#menuAccordion">
                         <ul class="nav flex-column ms-3">
+                            <!-- Flask’ta gelen tables sözlüğündeki her tabloyu döner -->
                             {% for table_name, data in tables.items() %}
+                                <!-- Eğer tablo adı listedeki isimlerden biriyse (yani extraction kategorisindeyse) -->
                                 {% if table_name in ["file_index", "text_lines", "pdf_images"] %}
                                     <li class="nav-item">
-                                        <a class="list-group-item list-group-item-action p-3 {% if table_name == 'text_lines' %}active{% endif %}"
+                                        <a class="list-group-item list-group-item-action p-3
+                                           {% if table_name == 'text_lines' %}active{% endif %}"
                                            id="menu-{{ table_name }}-extract"
                                            data-bs-toggle="list"
                                            href="#list-{{ table_name }}"
                                            role="tab"
                                            aria-controls="list-{{ table_name }}">
-                                            {{ table_name | replace('_', ' ') | title }}
+                                           <!-- Tablo adını düzgün biçimde yazdırır -->
+                                           {{ table_name | replace('_', ' ') | title }}
                                         </a>
                                     </li>
                                 {% endif %}
@@ -41,13 +73,21 @@
                         </ul>
                     </div>
                 </li>
+
+                <!-- TEXT SIMILARITY ANALYSIS KATEGORİSİ -->
                 <li class="nav-item">
-                    <a class="nav-link sidebar-tree-header" data-bs-toggle="collapse" href="#collapseText" role="button" aria-expanded="false">
+                    <a class="nav-link sidebar-tree-header"
+                       data-bs-toggle="collapse"
+                       href="#collapseText"
+                       role="button"
+                       aria-expanded="false">
                         <i class="bi bi-fonts me-2"></i> Text Similarity Analysis
                     </a>
+
                     <div class="collapse" id="collapseText" data-bs-parent="#menuAccordion">
                         <ul class="nav flex-column ms-3">
                             {% for table_name, data in tables.items() %}
+                                <!-- Sadece text_similarity tablosu bu kategoride görünür -->
                                 {% if table_name == "text_similarity" %}
                                     <li class="nav-item">
                                         <a class="list-group-item list-group-item-action p-3"
@@ -64,13 +104,21 @@
                         </ul>
                     </div>
                 </li>
+
+                <!-- IMAGE & BINARY ANALYSIS KATEGORİSİ -->
                 <li class="nav-item">
-                    <a class="nav-link sidebar-tree-header" data-bs-toggle="collapse" href="#collapseImage" role="button" aria-expanded="false">
+                    <a class="nav-link sidebar-tree-header"
+                       data-bs-toggle="collapse"
+                       href="#collapseImage"
+                       role="button"
+                       aria-expanded="false">
                         <i class="bi bi-image me-2"></i> Image & Binary Analysis
                     </a>
+
                     <div class="collapse" id="collapseImage" data-bs-parent="#menuAccordion">
                         <ul class="nav flex-column ms-3">
                             {% for table_name, data in tables.items() %}
+                                <!-- Eğer tablo adı bu üçlüden biriyse, bu menüde görünür -->
                                 {% if table_name in ["image_features", "image_similarity", "binary_similarity"] %}
                                     <li class="nav-item">
                                         <a class="list-group-item list-group-item-action p-3"
@@ -79,7 +127,8 @@
                                            href="#list-{{ table_name }}"
                                            role="tab"
                                            aria-controls="list-{{ table_name }}">
-                                            {{ table_name | replace('_', ' ') | title }}
+                                           <!-- Örnek: image_similarity → Image Similarity -->
+                                           {{ table_name | replace('_', ' ') | title }}
                                         </a>
                                     </li>
                                 {% endif %}
@@ -91,100 +140,144 @@
         </div>
     </div>
 
-    <div id="page-content-wrapper" class="w-100">
-        <div class="container-fluid my-4">
 
-            <section class="hero-section mb-5 shadow-sm">
-              <div class="hero-overlay"></div>
-              <div class="hero-content text-center text-light">
-                <h1 class="hero-title">
-                  🧠 Intelligent PDF Analysis Platform
-                </h1>
-                <p class="hero-subtitle">
-                  Explore, analyze, and visualize all extracted data — intelligently organized from your SQLite database.
-                </p>
+    <!-- Sağ taraf: ana içerik alanı -->
+<div id="page-content-wrapper" class="w-100">
+    <div class="container-fluid my-4">
+
+        <!-- 🧠 ÜST HERO ALANI -->
+        <section class="hero-section mb-5 shadow-sm">
+          <!-- Hero arka planına renkli gölge ve efekt ekleyen katman -->
+          <div class="hero-overlay"></div>
+
+          <!-- Hero içeriği: başlık ve açıklama -->
+          <div class="hero-content text-center text-light">
+            <h1 class="hero-title">
+              🧠 Intelligent PDF Analysis Platform
+            </h1>
+            <p class="hero-subtitle">
+              Explore, analyze, and visualize all extracted data — intelligently organized from your SQLite database.
+            </p>
+          </div>
+        </section>
+
+        <!-- ÖZET METRİKLER BAŞLIĞI -->
+        <h3 class="mt-5">📈 Summary Metrics</h3>
+
+        <!-- Flask’ten gelen summary sözlüğünü döner -->
+        <div class="row mb-5">
+            {% for key, value in summary.items() %}
+            <div class="col-md-3">
+                <!-- Her metrik bir kart içinde gösterilir -->
+                <div class="card p-3 mb-2">
+                    <strong>{{ key }}:</strong> {{ value }}
                 </div>
-            </section>
-
-            <h3 class="mt-5">📈 Summary Metrics</h3>
-            <div class="row mb-5">
-                {% for key, value in summary.items() %}
-                <div class="col-md-3">
-                    <div class="card p-3 mb-2">
-                        <strong>{{ key }}:</strong> {{ value }}
-                    </div>
-                </div>
-                {% endfor %}
             </div>
-
-            <div class="tab-content" id="nav-tabContent">
-                {% for table_name, data in tables.items() %}
-                    <div class="tab-pane fade {% if table_name == 'text_lines' %}show active{% endif %}"
-                         id="list-{{ table_name }}"
-                         role="tabpanel"
-                         aria-labelledby="menu-{{ table_name }}">
-                        <h3 class="mb-3">{{ table_name | replace('_', ' ') | title }} Table</h3>
-                        <p class="text-muted">Filtering, search, and sorting features have been added to this area.</p>
-
-                        <div class="table-container">
-                            <table id="{{ table_name }}" class="table table-striped table-bordered table-sm datatable" style="width: 100% !important;">
-                                <thead class="table-dark">
-                                    <tr>
-                                        {% for col in data.columns %}
-                                            <th>{{ col | title }}</th>
-                                        {% endfor %}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for row in data.rows %}
-                                    <tr>
-                                        {% for item in row %}
-                                            <td>{{ item | safe }}</td>
-                                        {% endfor %}
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
+            {% endfor %}
         </div>
-    </div>
-</div>
 
+        <!-- SEKME TABLARI (her tablo bir "tab-pane") -->
+        <div class="tab-content" id="nav-tabContent">
+
+            {% for table_name, data in tables.items() %}
+                <!-- Her tablo için ayrı bir panel oluşturulur -->
+                <div class="tab-pane fade {% if table_name == 'text_lines' %}show active{% endif %}"
+                     id="list-{{ table_name }}"
+                     role="tabpanel"
+                     aria-labelledby="menu-{{ table_name }}">
+
+                    <!-- Tablo başlığı -->
+                    <h3 class="mb-3">{{ table_name | replace('_', ' ') | title }} Table</h3>
+
+                    <!-- Açıklama metni -->
+                    <p class="text-muted">
+                        Filtering, search, and sorting features have been added to this area.
+                    </p>
+
+                    <!-- TABLO KAPSAYICISI -->
+                    <div class="table-container">
+                        <table id="{{ table_name }}"
+                               class="table table-striped table-bordered table-sm datatable"
+                               style="width: 100% !important;">
+                            <!-- TABLO BAŞLIĞI -->
+                            <thead class="table-dark">
+                                <tr>
+                                    {% for col in data.columns %}
+                                        <!-- Sütun isimlerini yazdırır -->
+                                        <th>{{ col | title }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+
+                            <!-- TABLO GÖVDE KISMI -->
+                            <tbody>
+                                {% for row in data.rows %}
+                                <tr>
+                                    {% for item in row %}
+                                        <!-- Hücre içeriği -->
+                                        <td>{{ item | safe }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div> <!-- /table-container -->
+                </div> <!-- /tab-pane -->
+            {% endfor %}
+        </div> <!-- /tab-content -->
+    </div> <!-- /container -->
+</div> <!-- /page-content-wrapper -->
+    </div>
+
+<!-- GÖRSEL ÖNİZLEME MODALİ -->
 <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
+
+      <!-- Modal başlık alanı -->
       <div class="modal-header">
         <h5 class="modal-title" id="imageModalLabel">Image Preview</h5>
+        <!-- Kapatma butonu -->
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
+
+      <!-- Modal gövdesi: resim görüntüsü -->
       <div class="modal-body text-center">
-        <img src="" id="modalImage" class="img-fluid" alt="Full Image Preview" style="max-height: 80vh;">
+        <img src=""
+             id="modalImage"
+             class="img-fluid"
+             alt="Full Image Preview"
+             style="max-height: 80vh;">
       </div>
     </div>
   </div>
 </div>
 
 
+
+<!-- 📜 Gerekli JS kütüphaneleri -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- jQuery: DataTables ve etkileşimler için gerekli -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<!-- DataTables çekirdek kütüphanesi -->
 <script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
+<!-- Bootstrap ile uyumlu DataTables stili -->
 <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.min.js"></script>
 
 <script>
+// 🧩 Sayfa tamamen yüklendiğinde jQuery çalışmaya başlar
 $(document).ready(function () {
 
-  // 🧩 Ortak DataTable ayarları
+  // 🧠 ORTAK DataTable AYARLARI
+  // Bu yapı tüm tablolar için geçerli varsayılan konfigürasyondur.
   const baseOpts = {
-    responsive: false,
-    autoWidth: false,
-    lengthMenu: [
+    responsive: false,        // Mobilde sütunları alt alta yapmaz
+    autoWidth: false,         // Sütun genişliklerini otomatik hesaplamaz
+    lengthMenu: [             // Kullanıcıya sayfa başına kaç satır gösterileceğini seçtirme
         [10, 15, 20, 25, 30, 35, 40, 45, 50],
         ['10', '15', '20', '25', '30', '35', '40', '45', '50']
     ],
-    language: {
+    language: {               // DataTables arayüzündeki metinleri özelleştirir
       "emptyTable": "No data available in table",
       "info": "Showing START to END of TOTAL entries",
       "infoEmpty": "Showing 0 to 0 of 0 entries",
@@ -193,7 +286,7 @@ $(document).ready(function () {
       "processing": "Processing...",
       "search": "Search:",
       "zeroRecords": "No matching records found",
-      "paginate": {
+      "paginate": {           // Sayfa geçiş butonlarının metinleri
         "first": "First",
         "last": "Last",
         "next": "Next",
@@ -202,85 +295,100 @@ $(document).ready(function () {
     }
   };
 
-  // 🔹 Text Similarity tablosu için özel ayarlar
+  // 🧩 TEXT SIMILARITY TABLOSU ÖZEL AYARLARI
+  // Bu tablo diğerlerinden farklı olarak tooltip (hücre üstüne gelince tam metin gösterme) kullanır.
   const textSimOpts = {
-    ...baseOpts,
+    ...baseOpts, // Yukarıdaki ayarları kopyalar
     columnDefs: [
       {
-        targets: "_all",
+        targets: "_all", // Tüm sütunlarda geçerli
         createdCell: function (td, cellData) {
+          // Hücredeki HTML etiketlerini temizleyip sadece yazıyı bırakır
           let raw = (cellData == null) ? "" : String(cellData);
           raw = raw.replace(/<[^>]*>/g, "");
-          td.title = raw;
+          td.title = raw; // Hücre üstüne gelince gösterilecek tooltip metni
           td.classList.add("has-tip");
         }
       }
     ]
   };
 
-  // 🔸 Başlangıçta sadece text_lines tablosunu başlat
+  // 🔹 SAYFA YÜKLENDİĞİNDE 'text_lines' TABLOSUNU BAŞLAT
   $('#text_lines').DataTable(baseOpts);
 
-  // 🔸 Sayfa yüklendiğinde aktif olan linkin kategorisini de aktif yap
-  $('a.list-group-item.active').closest('div.collapse').closest('li.nav-item').find('.sidebar-tree-header').addClass('active');
+  // 🔹 AKTİF LİNKİN KATEGORİSİNİ DE VURGULA (Yeşil highlight)
+  $('a.list-group-item.active')
+      .closest('div.collapse')
+      .closest('li.nav-item')
+      .find('.sidebar-tree-header')
+      .addClass('active');
 
 
-  // 🔸 Menüden tıklanınca aktif tabloyu değiştir
+  // 🔹 MENÜDE BİR ALT TABLO LİNKİNE TIKLANINCA ÇALIŞAN KOD
   $('a.list-group-item[data-bs-toggle="list"]').on('click', function (e) {
-    e.preventDefault();
-    const targetTab = $(this).attr('href');
+    e.preventDefault(); // Linkin sayfayı yenilemesini engeller
+    const targetTab = $(this).attr('href'); // Örneğin "#list-text_lines"
     if (!targetTab || !targetTab.startsWith('#list-')) return;
 
-    // Aktif link stilini ayarla
+    // 1️⃣ Tıklanan alt linki aktif yap, diğerlerini temizle
     $('a.list-group-item[data-bs-toggle="list"]').removeClass('active');
     $(this).addClass('active');
 
-    // Aktif kategori stilini ayarla
+    // 2️⃣ Kategori başlığını da aktif yap (örneğin "Data Extraction")
     $('.sidebar-tree-header').removeClass('active');
-    $(this).closest('div.collapse').closest('li.nav-item').find('.sidebar-tree-header').addClass('active');
+    $(this)
+      .closest('div.collapse')
+      .closest('li.nav-item')
+      .find('.sidebar-tree-header')
+      .addClass('active');
 
-    // Panelleri değiştir
+    // 3️⃣ İçerik kısmında sadece ilgili tabloyu göster
     $('.tab-content .tab-pane').removeClass('show active');
     $(targetTab).addClass('show active');
 
-    // DataTable'ı başlat (Eğer zaten başlatılmadıysa)
-    const tableId = targetTab.replace('#list-', '');
+    // 4️⃣ DataTable daha önce yüklenmediyse başlat
+    const tableId = targetTab.replace('#list-', ''); // Örn: "text_lines"
     const selector = '#' + tableId;
 
     if (!$.fn.DataTable.isDataTable(selector)) {
+      // Text similarity tablosu için özel ayar, diğerleri baseOpts
       const opts = (tableId === 'text_similarity') ? textSimOpts : baseOpts;
       $(selector).DataTable(opts);
     }
 
-    // Kolon hizalamasını düzelt
+    // 5️⃣ Tablodaki sütun hizalamasını düzelt
     $(selector).DataTable().columns.adjust().draw();
   });
 
-  // 🔸 Kategori başlığına tıklayınca da 'active' yap (Maviyi engelle)
-  $('.sidebar-tree-header').on('click', function() {
-    // Diğer kategorilerin 'active' sınıfını kaldır
-    $('.sidebar-tree-header').not(this).removeClass('active');
-    $(this).addClass('active');
 
-    // Alt linklerin 'active' durumunu kaldır
+  // 🔹 KATEGORİ BAŞLIĞINA TIKLANINCA
+  // Yani “Data Extraction”, “Text Similarity”, “Image Analysis” başlıklarına
+  $('.sidebar-tree-header').on('click', function() {
+    // Diğer tüm başlıklardan 'active' sınıfını kaldır
+    $('.sidebar-tree-header').not(this).removeClass('active');
+    // Sadece tıklanan başlığı aktif yap
+    $(this).addClass('active');
+    // Alt linklerdeki mavi seçimi kaldır
     $('a.list-group-item[data-bs-toggle="list"]').removeClass('active');
   });
 
 
-  // --- Hero Buton Kısayolları (Kaldırıldı) ---
-
-
-  // --- MODAL IMAGE HANDLER ---
+  // 🔹 GÖRSEL ÖNİZLEME MODALİ
+  // Kullanıcı bir görsele tıkladığında modal açılır
   var imageModal = document.getElementById('imageModal');
   imageModal.addEventListener('show.bs.modal', function (event) {
+    // Modal tetikleyicisi olan butonu alır
     var button = event.relatedTarget;
+    // Butondaki 'data-img-src' attribute'undan görsel yolunu alır
     var imgSrc = button.getAttribute('data-img-src');
+    // Modal içindeki img etiketini bulur ve src'yi değiştirir
     var modalImage = imageModal.querySelector('#modalImage');
     modalImage.src = imgSrc;
   });
 
-});
+}); // <-- document.ready sonu
 </script>
+
 
 </body>
 </html>
