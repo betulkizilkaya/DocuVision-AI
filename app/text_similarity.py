@@ -1,4 +1,3 @@
-# app/text_similarity.py
 import sqlite3
 from pathlib import Path
 import re
@@ -21,16 +20,17 @@ LENGTH_TOL = 10 #Uzunluk toleransı (|len(a)-len(b)| ≤ 10) Metinlerin uzunluğ
 PREFIX_LEN = 2 #Aynı ilk N harf (bloklama). Düşürürsek hız düşer, recall artar; yükseltirsek hız artar, recall düşer.
 
 THRESH = 0.90 # %90 eşik
-COMPARE_WITHIN_FILE = True
-COMPARE_ACROSS_FILES = True
+COMPARE_WITHIN_FILE = True # aynı dosya içi karşılaştırma
+COMPARE_ACROSS_FILES = True # farklı dosyalar arası karşılaştırma
 
+# baş/son boşluklar temizlenir
+#küçük harde indirilir
 _norm_space = re.compile(r"\s+")
-
 def normalize_text(s: str) -> str:
     s = _norm_space.sub(" ", s.strip())
     return s.lower()
 
-def ensure_schema(conn: sqlite3.Connection):
+def ensure_schema(conn: sqlite3.Connection):#kontrol amaçlı. şemayı garantilemek için
     cur = conn.cursor()
     # text_similarity yoksa oluştur
     cur.execute("PRAGMA table_info(text_similarity)")
@@ -61,7 +61,7 @@ def ensure_schema(conn: sqlite3.Connection):
     cur.execute("CREATE INDEX IF NOT EXISTS ix_txtsim_avg ON text_similarity(avg_score)")
     conn.commit()
 
-def load_lines(conn: sqlite3.Connection):
+def load_lines(conn: sqlite3.Connection):#Veritabanından çektik
     cur = conn.cursor()
     cur.execute("""
         SELECT id, file_id, length, text
@@ -78,7 +78,7 @@ def load_lines(conn: sqlite3.Connection):
     return items
 
 def build_buckets(items):
-    # bucket key = (length_bin, prefix)
+    # Milyonlarca alakasız karşılaştırmayı erken elemek için
     buckets = {}
     for lid, fid, ln, txt in items:
         prefix = txt[:PREFIX_LEN] if len(txt) >= PREFIX_LEN else txt
@@ -93,9 +93,8 @@ def compute_tfidf(texts):
     return vec, X
 
 def cosine_from_sparse_row(X, i, j):#iki satırın anlamsal yakınlığı ölçülür.
-    # hızlı: X[i] dot X[j]^T
+    # Seyrek matris üzerinde hızlı nokta çarpımı
     v = X[i].multiply(X[j]).sum()
-    # normlar tf-idf'de 1'e yakın; yine de emniyet:
     ni = np.sqrt(X[i].multiply(X[i]).sum())
     nj = np.sqrt(X[j].multiply(X[j]).sum())
     if ni == 0 or nj == 0:
@@ -166,7 +165,7 @@ def main():
             avg = (lev + jaro + dice + tfidf) / 4.0          #avg_score: hepsinin ortalaması → tek güvenilir skor.
             passed = 1 if avg >= THRESH else 0
 
-            if passed:#Yalnızca %90+ olanlar yazılır.
+            if passed: #Yalnızca %90+ olanlar yazılır.
                 a, b = (lid_a, lid_b) if lid_a < lid_b else (lid_b, lid_a)
                 try:
                     cur.execute("""

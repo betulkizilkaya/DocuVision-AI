@@ -38,8 +38,8 @@ def extract_images_from_pdf(pdf_path: Path, conn):
     cursor = conn.cursor()
 
     # file_index tablosunda dosyayı kaydet (Betül'ün tablosu)
-    with open(pdf_path, "rb") as f:
-        file_hash = sha256_bytes(f.read())
+    with open(pdf_path, "rb") as f:           #DF dosyasını "binary read" (rb) modunda açar,
+        file_hash = sha256_bytes(f.read())    #tüm içeriğini okur ve SHA-256 parmak izini (file_hash) hesaplar.
 
     cursor.execute("INSERT OR IGNORE INTO file_index (filename, sha256) VALUES (?, ?)",
                    (pdf_path.name, file_hash))
@@ -53,12 +53,12 @@ def extract_images_from_pdf(pdf_path: Path, conn):
 
     image_counter = 0
     for page_no, page in enumerate(doc, start=1):
-        images = page.get_images(full=True)
+        images = page.get_images(full=True)          #sayfadaki tüm görselleri alır
         for img_index, img in enumerate(images):
-            xref = img[0]
-            base_image = doc.extract_image(xref)
-            img_bytes = base_image["image"]
-            sha = sha256_bytes(img_bytes)
+            xref = img[0]                            #img[0], görselin PDF içindeki dahili referans numarasıdır (xref). 0 yazma nedeni sırayla teker teker işlemesi
+            base_image = doc.extract_image(xref)     #fitz'e o referans numarasındaki asıl görsel verisini PDF'in içinden söküp almasını söyler
+            img_bytes = base_image["image"]          #görselin ham bytes datasını alır
+            sha = sha256_bytes(img_bytes)            #görselin kendisine ait SHA-256 parmak izini hesaplar
 
             # Görseli BLOB olarak kaydet
             cursor.execute("""
@@ -67,8 +67,8 @@ def extract_images_from_pdf(pdf_path: Path, conn):
             """, (file_id, page_no, img_index, sha, sqlite3.Binary(img_bytes)))
 
             # Thumbnail oluştur ve kaydet
-            image = Image.open(io.BytesIO(img_bytes))
-            image.thumbnail((128, 128))
+            image = Image.open(io.BytesIO(img_bytes))   #bytes verisi PIL in anlayacağı formata sokulur
+            image.thumbnail((128, 128))                 #en-boy
             thumb_name = f"{pdf_path.stem}_p{page_no}_{img_index}.png"
             image.save(OUT_DIR / thumb_name)
 
@@ -81,7 +81,7 @@ def extract_images_from_pdf(pdf_path: Path, conn):
 def process_all_pdfs():
     """data/ klasöründeki tüm PDF'leri işler."""
     conn = create_connection(DB_PATH)
-    for pdf_file in PDF_DIR.glob("*.pdf"):
+    for pdf_file in PDF_DIR.glob("*.pdf"):        #data/ klasöründeki sonu .pdf ile biten tüm dosyaları bulur.
         extract_images_from_pdf(pdf_file, conn)
     conn.close()
     print("Tüm PDF’lerin görselleri çıkarıldı ve veritabanına kaydedildi.")

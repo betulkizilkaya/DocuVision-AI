@@ -22,20 +22,17 @@ def sha256_file(path: Path, chunk_size: int = 1 << 20) -> str:
     h = sha256()
     with path.open("rb") as f:
         while True:
-            chunk = f.read(chunk_size)
+            chunk = f.read(chunk_size)# 1 MB parça parça okuma
             if not chunk:
                 break
             h.update(chunk)
     return h.hexdigest()
 
 def extract_text_lines(pdf_path: Path):
-    """
-    PDF'ten metni çıkarıp; her satırı (page_no, line_no, text, length) olarak döndürüyoruz.
-    20–300 karakter filtresi uyguladık.
-    """
+    #PDF'ten metni çıkarıp; her satırı döndürüyoruz. 20–300 karakter filtresi uyguladık.
     rows = []
     with pdfplumber.open(str(pdf_path)) as pdf:
-        for page_no, page in enumerate(pdf.pages, start=1):#Her sayfayı açar (page_no 1’den başlar)
+        for page_no, page in enumerate(pdf.pages, start=1):#Her sayfayı açar
             text = page.extract_text()#extract_text() ile sayfadaki metni alır.
             if not text:
                 continue# Eğer sayfa sadece görselse (örneğin tarama), text boş gelir.
@@ -87,6 +84,7 @@ def get_or_create_file(conn: sqlite3.Connection, pdf_path: Path) -> int:# Dosya 
 
 def replace_text_lines(conn: sqlite3.Connection, file_id: int, lines):
     # Aynı PDF için önce eski satırları siler, sonra yeni satırları ekler/idempotent
+    #tekrar çalıştırma güvenli
     cur = conn.cursor()
     cur.execute("DELETE FROM text_lines WHERE file_id=?", (file_id,))
     if lines:
