@@ -93,9 +93,12 @@ def build_buckets(items):
 
 def compute_tfidf(texts):
     vec = TfidfVectorizer(
-        ngram_range=(1, 2),
-        min_df=1,
-        token_pattern=r"(?u)\b\w+\b"  # Türkçe karakterleri destekler
+        ngram_range=(1, 2), #1,2 kelimelik parçalar
+        min_df=1, #en az 1 belgede geçiyosa dahil edilir
+        token_pattern=r"(?u)\b\w+\b" #“ç, ğ, ş, ü, ö, ı, İ” gibi harfler artık token yani kelime olarak kabul edilir.
+        #(?u)->Unicode modunda çalış demek
+        #\w->kelime karakterleri (Unicode’da Türkçe karakterleri de içerir)
+        #\b->kelimenin sınırı
     )
 
     X = vec.fit_transform(texts)  # sparse
