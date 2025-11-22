@@ -1,5 +1,6 @@
 import sqlite3
 from pathlib import Path
+import unicodedata
 import re
 
 from rapidfuzz.fuzz import ratio as lev_ratio
@@ -23,12 +24,15 @@ THRESH = 0.90 # %90 eşik
 COMPARE_WITHIN_FILE = True # aynı dosya içi karşılaştırma
 COMPARE_ACROSS_FILES = True # farklı dosyalar arası karşılaştırma
 
-# baş/son boşluklar temizlenir
-#küçük harde indirilir
+
 _norm_space = re.compile(r"\s+")
+
 def normalize_text(s: str) -> str:
-    s = _norm_space.sub(" ", s.strip())
-    return s.lower()
+    s = unicodedata.normalize("NFKC", s) #Saçma kodlamaları düzeltir
+    s = _norm_space.sub(" ", s.strip()) #boşlukları tek boşluğa indirir
+    s = s.casefold()            # Türkçe için en doğru lowercase
+    s = s.replace("i̇", "i")     # Türkçe I/İ hatası düzeltme
+    return s
 
 def ensure_schema(conn: sqlite3.Connection):#kontrol amaçlı. şemayı garantilemek için
     cur = conn.cursor()
@@ -88,7 +92,12 @@ def build_buckets(items):
     return buckets
 
 def compute_tfidf(texts):
-    vec = TfidfVectorizer(ngram_range=(1,2), min_df=1)#1-gram ve 2-gram TF-IDF.
+    vec = TfidfVectorizer(
+        ngram_range=(1, 2),
+        min_df=1,
+        token_pattern=r"(?u)\b\w+\b"  # Türkçe karakterleri destekler
+    )
+
     X = vec.fit_transform(texts)  # sparse
     return vec, X
 
