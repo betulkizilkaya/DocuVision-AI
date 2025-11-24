@@ -50,6 +50,7 @@ def create_tables(conn):
         jaro REAL,
         dice REAL,
         tfidf_cosine REAL,
+        jaccard_tokens REAL,
         avg_score REAL,
         passed_threshold INTEGER
     );

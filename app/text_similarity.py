@@ -26,13 +26,23 @@ COMPARE_WITHIN_FILE = True # aynı dosya içi karşılaştırma
 COMPARE_ACROSS_FILES = True # farklı dosyalar arası karşılaştırma
 
 _norm_space = re.compile(r"\s+")
-
 def normalize_text(s: str) -> str:
     s = unicodedata.normalize("NFKC", s) #Saçma kodlamaları düzeltir
     s = _norm_space.sub(" ", s.strip()) #boşlukları tek boşluğa indirir
     s = s.casefold()            # Türkçe için en doğru lowercase
     s = s.replace("i̇", "i")     # Türkçe I/İ hatası düzeltme
     return s
+
+def jaccard_tokens(a: str, b: str) -> float:
+    set_a = set(a.split())
+    set_b = set(b.split())
+    if not set_a and not set_b:
+        return 1.0
+    if not set_a or not set_b:
+        return 0.0
+    inter = len(set_a & set_b)
+    union = len(set_a | set_b)
+    return inter / union
 
 def ensure_schema(conn: sqlite3.Connection):#kontrol amaçlı. şemayı garantilemek için
     cur = conn.cursor()
@@ -49,6 +59,7 @@ def ensure_schema(conn: sqlite3.Connection):#kontrol amaçlı. şemayı garantil
           jaro REAL,
           dice REAL,
           tfidf_cosine REAL,
+          jaccard_tokens REAL,        
           avg_score REAL,
           passed_threshold INTEGER
         );
@@ -57,7 +68,9 @@ def ensure_schema(conn: sqlite3.Connection):#kontrol amaçlı. şemayı garantil
         # Eksik kolonları ekle
         to_add = []
         if "tfidf_cosine" not in cols:    to_add.append("ALTER TABLE text_similarity ADD COLUMN tfidf_cosine REAL;")
+        if "jaccard_tokens" not in cols:to_add.append("ALTER TABLE text_similarity ADD COLUMN jaccard_tokens REAL;")
         if "passed_threshold" not in cols:to_add.append("ALTER TABLE text_similarity ADD COLUMN passed_threshold INTEGER;")
+
         for stmt in to_add:
             cur.execute(stmt)
 
@@ -173,21 +186,22 @@ def main():
             dice = td.dice.distance(txt_a, txt_b)            #Dice: karakter/kelime çifti benzerliği (yapısal).
             dice = 1.0 - dice
             tfidf = cosine_from_sparse_row(X, g_a, g_b)      #TF-IDF cosine: anlam temelli (kelime önemine bakar).
+            jacc = jaccard_tokens(txt_a, txt_b)
 
-            avg = (lev + jaro + dice + tfidf) / 4.0          #avg_score: hepsinin ortalaması → tek güvenilir skor.
+            avg = (lev + jaro + dice + tfidf + jacc) / 5.0
             passed = 1 if avg >= THRESH else 0
 
-            if passed: #Yalnızca %90+ olanlar yazılır.
+            if passed:
                 a, b = (lid_a, lid_b) if lid_a < lid_b else (lid_b, lid_a)
                 try:
                     cur.execute("""
-                        INSERT INTO text_similarity
-                        (line_id_a, line_id_b, lev_ratio, jaro, dice, tfidf_cosine, avg_score, passed_threshold)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (a, b, lev, jaro, dice, tfidf, avg, passed))
+                                INSERT INTO text_similarity
+                                (line_id_a, line_id_b, lev_ratio, jaro, dice, tfidf_cosine, jaccard_tokens, avg_score,
+                                 passed_threshold)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                """, (a, b, lev, jaro, dice, tfidf, jacc, avg, passed))
                     inserted += 1
                 except sqlite3.IntegrityError:
-                    #Tekillik ihlalinde IntegrityError yakalanır ve tekrar yazılmaz.
                     pass
 
         conn.commit()
