@@ -1,286 +1,216 @@
-# ============================================================
-# project/app/web/app.py (FINAL - TÜM TABLOLAR İÇİN LIMIT 50)
-# ============================================================
-# Bu dosya, Flask web uygulamasının ana sunucu (backend) dosyasıdır.
-# Görevi:
-#   - SQLite veritabanına bağlanmak,
-#   - Farklı tabloların verilerini çekmek (limit 50 satır),
-#   - Görsel (image, renk paleti) formatlamasını yapmak,
-#   - HTML şablonuna (index.html) bu verileri yollayıp sayfayı üretmektir.
-# ============================================================
+import sqlite3
+from flask import Flask, render_template, g
+import os
+import base64
 
-
-import sqlite3                 # SQLite veritabanına bağlanmak için.
-from flask import Flask, render_template, g  # Flask framework ve context yönetimi.
-import os                      # Dosya/dizin yollarını yönetmek için.
-import base64                  # Görselleri Base64'e çevirmek için.
-import re                      # Renk paletindeki RGB verilerini ayrıştırmak için.
 
 # ------------------------------------------------------------
-# Dosya Yollarını Ayarlama
+# Dosya Yolları
 # ------------------------------------------------------------
-# BASE_DIR: Bu Python dosyasının bulunduğu dizini temsil eder.
-# DB_PATH: Gerçek veritabanı dosyasının konumunu belirtir.
-# Burada '../..' ile 2 klasör yukarı çıkarak 'db/corpus.sqlite' dosyasına ulaşıyoruz.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 DB_PATH = os.path.join(BASE_DIR, '..', '..', 'db', 'corpus.sqlite')
 
-# Flask uygulamasını başlatıyoruz.
 app = Flask(__name__)
 
-
 # ============================================================
-# --- DATABASE CONNECTION MANAGEMENT ---
-# ============================================================
-# Flask'ta her istek (request) için ayrı bir veritabanı bağlantısı kullanılır.
-# Bağlantıyı "g" adlı global bir Flask context nesnesine koyarız.
-# İş bitince bağlantı otomatik kapanır.
+# DATABASE CONNECTION
 # ============================================================
 
 def get_db():
-    """Veritabanı bağlantısını oluşturur veya mevcut olanı döndürür."""
-    db = getattr(g, '_database', None)  # Daha önce bir bağlantı var mı?
+    db = getattr(g, '_database', None)
     if db is None:
-        db = g._database = sqlite3.connect(DB_PATH)  # Yoksa yeni bağlantı oluştur.
-        db.row_factory = sqlite3.Row  # Sorgu sonuçlarını dictionary benzeri erişim için ayarlar.
+        # BURAYA YENİDEN EKLEYİN:
+        print(f"HATA OLUŞAN TAM YOL: {DB_PATH}") 
+        db = g._database = sqlite3.connect(DB_PATH)  # Hata burada oluşuyor
+        db.row_factory = sqlite3.Row
     return db
-
 
 @app.teardown_appcontext
 def close_connection(exception):
-    """İstek tamamlanınca (veya hata olunca) veritabanı bağlantısını kapatır."""
     db = getattr(g, '_database', None)
     if db is not None:
         db.close()
 
-
 # ============================================================
-# --- SUMMARY METRICS FUNCTION ---
-# ============================================================
-# Bu fonksiyon, dashboard üst kısmında görülen küçük özet kutularını (metrics) hesaplar:
-#   - Toplam PDF sayısı
-#   - Toplam görsel (image) sayısı
-#   - Ortalama benzerlik skoru
-#   - %90 üzeri benzerlik sayısı
+# SUMMARY METRICS
 # ============================================================
 
 def get_summary_metrics():
-    """Veritabanından özet metrikleri hesaplar."""
-    db = get_db()  # Veritabanı bağlantısını al.
+    db = get_db()
     metrics = {
-        "Total PDF Count": 0,
-        "Total Images": 0,
-        "Average Text Similarity (Avg Score)": 0.0,
-        "High Similarity Pairs (>90%)": 0
+        "Total PDF Count": "N/A",
+        "Total Images": "N/A",
+        "Average Text Similarity (Avg Score)": "N/A",
+        "Average Image Similarity (Avg Score)": "N/A",
+        "High Similarity Pairs (>90%)": "N/A",
+        "High Text Similarity Pairs (>90%)": "N/A",
+        "High Image Similarity Pairs (>90%)": "N/A"
     }
 
+    # Total PDFs
     try:
-        # --- 1️⃣ Toplam PDF sayısı ---
         metrics["Total PDF Count"] = db.execute("SELECT COUNT(id) FROM file_index").fetchone()[0]
+    except:
+        pass
 
-        # --- 2️⃣ Toplam Görsel sayısı ---
+    # Total Images
+    try:
         metrics["Total Images"] = db.execute("SELECT COUNT(id) FROM pdf_images").fetchone()[0]
+    except:
+        pass
 
-        # --- 3️⃣ Ortalama benzerlik skoru ---
-        avg_score_result = db.execute("SELECT AVG(avg_score) FROM text_similarity").fetchone()[0]
-        if avg_score_result is not None:
-            metrics["Average Text Similarity (Avg Score)"] = f"{avg_score_result:.3f}"
-        else:
-            metrics["Average Text Similarity (Avg Score)"] = "N/A"
+    # Avg text sim
+    try:
+        avg_text = db.execute("SELECT AVG(avg_score) FROM text_similarity").fetchone()[0]
+        metrics["Average Text Similarity (Avg Score)"] = f"{avg_text:.3f}" if avg_text else "N/A"
+    except:
+        pass
 
-        # --- 4️⃣ Yüksek benzerlik oranı (>90%) ---
-        high_sim_result = db.execute("SELECT COUNT(id) FROM text_similarity WHERE avg_score > 0.90").fetchone()[0]
-        metrics["High Similarity Pairs (>90%)"] = high_sim_result
+    # Avg image sim
+    try:
+        avg_img = db.execute("SELECT AVG(avg_similarity) FROM image_similarity").fetchone()[0]
+        metrics["Average Image Similarity (Avg Score)"] = f"{avg_img:.3f}" if avg_img else "N/A"
+    except:
+        pass
 
-    except sqlite3.OperationalError as e:
-        # Eğer tablo yoksa veya kolon adı yanlışsa hata oluşur.
-        print(f"Database error while fetching metrics: {e}")
-        metrics["Average Text Similarity (Avg Score)"] = "DB Error"
+    # High text sim > 0.90
+    try:
+        high_text = db.execute(
+            "SELECT COUNT(id) FROM text_similarity WHERE CAST(avg_score AS REAL) > 0.90"
+        ).fetchone()[0]
+        metrics["High Text Similarity Pairs (>90%)"] = high_text
+        metrics["High Similarity Pairs (>90%)"] = high_text
+    except:
+        pass
+
+    # High image sim > 0.90
+    try:
+        high_img = db.execute(
+            "SELECT COUNT(id) FROM image_similarity WHERE CAST(avg_similarity AS REAL) > 0.90"
+        ).fetchone()[0]
+        metrics["High Image Similarity Pairs (>90%)"] = high_img
+    except:
+        pass
 
     return metrics
 
-
 # ============================================================
-# --- DATA FETCHING FUNCTION ---
-# ============================================================
-# Her tablo için yalnızca 50 satır veri alınır (LIMIT 50)
-# "image_features" tablosu için 1768 kayıt atlanarak (OFFSET 1768) 1769. satırdan başlanır.
+# GENERIC TABLE FETCHER
 # ============================================================
 
 def get_table_data(table_name):
-    """Tüm tablolar için ilk 50 satırı (veya belirli offsetten) getirir."""
     db = get_db()
     try:
-        query = ""
-
-        # Özel durum: image_features tablosunda ilk 1768 satırı atlıyoruz.
-        if table_name == 'image_features':
-            query = f"SELECT * FROM {table_name} LIMIT 50 OFFSET 1768"
-        else:
-            query = f"SELECT * FROM {table_name} LIMIT 50"
-
+        query = f"SELECT * FROM {table_name} ORDER BY id ASC LIMIT 100"
         cursor = db.execute(query)
-        columns = [description[0] for description in cursor.description]
+        columns = [c[0] for c in cursor.description]
         rows = cursor.fetchall()
         return columns, rows
-
     except sqlite3.OperationalError:
-        # Eğer tablo yoksa (örneğin test sırasında)
-        return [f"{table_name} Table Missing"], [["Data expected..."]]
+        return [f"{table_name} Missing"], [["Data expected..."]]
     except Exception as e:
-        # Diğer beklenmedik hatalar
         return ["Error"], [[f"Could not retrieve data: {e}"]]
 
-
 # ============================================================
-# --- COLOR PALETTE HELPER FUNCTION ---
-# ============================================================
-# Bu fonksiyon, veritabanındaki "top_colors" sütunundan gelen renk verilerini
-# (örneğin "(23,45,67),(200,210,220)") HTML içinde küçük renk kutucuklarına dönüştürür.
-# ============================================================
-
-def create_color_palette(colors_data_string):
-    """RGB renk dizilerini küçük karelere çevirir."""
-    if not colors_data_string or colors_data_string == "NULL" or colors_data_string == "N/A":
-        return "N/A"
-    try:
-        # regex ile "(r,g,b)" kalıplarını yakalar.
-        rgb_tuples = re.findall(r'\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\)', str(colors_data_string))
-        if not rgb_tuples:
-            return "Invalid Color Data"
-    except Exception:
-        return "Parsing Error"
-
-    # HTML içeriğini oluştur
-    palette_html = '<div style="display: flex; gap: 2px; align-items: center;">'
-    for (r, g, b) in rgb_tuples:
-        color_css = f"rgb({r}, {g}, {b})"
-        palette_html += f'<div style="width: 20px; height: 20px; background-color: {color_css}; border: 1px solid #ccc; border-radius: 3px;" title="{color_css}"></div>'
-    palette_html += '</div>'
-    return palette_html
-
-
-# ============================================================
-# --- BASE64 / COLOR PALETTE FORMATLAMA ---
-# ============================================================
-# Bu fonksiyon, satırlardaki "blob" veya "thumbnail_base64" kolonlarını
-# doğrudan img etiketi hâline getirir (HTML).
-# Renk paleti de burada görselleştirilir.
+# IMAGE BASE64 + COLOR FORMATTER
 # ============================================================
 
 def format_visual_columns(table_name, columns, rows):
-    """Görsel verileri (blob/base64) img tag olarak, renkleri palet olarak dönüştürür."""
-    # Kolonların index'lerini bul
-    try:
-        blob_index = columns.index('blob')
-    except ValueError:
-        blob_index = -1
-    try:
-        thumb_index = columns.index('thumbnail_base64')
-    except ValueError:
-        thumb_index = -1
-    try:
-        colors_index = columns.index('top_colors')
-    except ValueError:
-        colors_index = -1
+    try: blob_index = columns.index('blob')
+    except: blob_index = -1
+    try: thumb_index = columns.index('thumbnail_base64')
+    except: thumb_index = -1
+    try: colors_index = columns.index('top_colors')
+    except: colors_index = -1
 
-    # Eğer görsel veya renk yoksa direkt döndür.
     if blob_index == -1 and thumb_index == -1 and colors_index == -1:
         return rows
 
     new_rows = []
-
-    # Her satırı dolaş
     for row in rows:
-        row_list = list(row)
+        row = list(row)
+
         target_index = blob_index if blob_index != -1 else thumb_index
-
-        # Görsel sütunu varsa:
         if target_index != -1:
-            blob_data = row_list[target_index]
-            image_tag = "No Image"
-            img_style = "width: 80px; height: 80px; object-fit: cover; border-radius: 4px; cursor: pointer;"
+            blob = row[target_index]
+            img_html = "No Image"
+            style = "width:80px;height:80px;object-fit:cover;border-radius:4px;cursor:pointer;"
             base64_data = ""
-
-            # Görsel verisi varsa, base64'e çevir
-            if blob_data:
-                if isinstance(blob_data, bytes) and len(blob_data) > 100:
-                    base64_data = base64.b64encode(blob_data).decode('utf-8')
-                elif isinstance(blob_data, str) and len(blob_data) > 100:
-                    base64_data = blob_data
-
-            # Eğer base64 verisi oluştuysa img etiketi hazırla
+            if blob:
+                if isinstance(blob, bytes) and len(blob) > 100:
+                    base64_data = base64.b64encode(blob).decode("utf-8")
+                elif isinstance(blob, str) and len(blob) > 100:
+                    base64_data = blob
             if base64_data:
-                image_tag = f'''
-                <a href="#" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="data:image/png;base64,{base64_data}">
-                    <img src="data:image/png;base64,{base64_data}" alt="Thumbnail" style="{img_style}">
+                img_html = f"""
+                <a data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="data:image/png;base64,{base64_data}">
+                    <img src="data:image/png;base64,{base64_data}" style="{style}">
                 </a>
-                '''
-            row_list[target_index] = image_tag
+                """
+            row[target_index] = img_html
 
-        # Renk paleti sütunu varsa:
-        if colors_index != -1 and table_name == 'image_features':
-            colors_data = row_list[colors_index]
-            row_list[colors_index] = create_color_palette(colors_data)
+        # Color palette
+        if colors_index != -1 and table_name == "image_features":
+            row[colors_index] = "Color palette here"
 
-        new_rows.append(row_list)
+        new_rows.append(row)
     return new_rows
 
-
 # ============================================================
-# --- Tüm Tabloları Al ve Formatla ---
-# ============================================================
-# Burada hangi tabloların gösterileceğini belirtiyoruz.
-# Her tabloyu get_table_data() ile çekip, görselleri formatlayıp
-# "all_data" sözlüğüne ekliyoruz.
+# ALL TABLES GETTER
 # ============================================================
 
 def get_all_tables():
-    """Tüm tabloların kolon ve satırlarını getirip formatlar."""
-    table_list = [
+    table_names = [
         "file_index", "text_lines", "text_similarity",
         "pdf_images", "image_features", "image_similarity", "binary_similarity"
     ]
-    all_data = {}
 
-    for table in table_list:
+    data = {}
+    for table in table_names:
         columns, rows = get_table_data(table)
         rows = format_visual_columns(table, columns, rows)
-        all_data[table] = {'columns': columns, 'rows': rows}
+        data[table] = {"columns": columns, "rows": rows}
 
-    return all_data
-
+    return data
 
 # ============================================================
-# --- MAIN ROUTE (Ana Sayfa) ---
-# ============================================================
-# Flask’ın ana sayfa rotası.
-# Burada tüm tablolar ve özet metrikler çekilip
-# 'index.html' adlı template’e yollanır.
+# MAIN ROUTE
 # ============================================================
 
 @app.route('/')
 def index():
-    all_data = get_all_tables()          # Tüm tabloların verilerini çek.
-    summary_metrics = get_summary_metrics()  # Özet metrikleri çek.
+    tables = get_all_tables()
+    metrics = get_summary_metrics()
 
-    # Dashboard kutucukları için sadeleştirilmiş dictionary
     final_summary = {
-        "Total PDF Count": summary_metrics["Total PDF Count"],
-        "Similarity Ratios (Avg)": summary_metrics["Average Text Similarity (Avg Score)"],
-        "Total Images": summary_metrics["Total Images"],
-        "High Similarity Pairs (>90%)": summary_metrics["High Similarity Pairs (>90%)"]
+        "Total PDF Count": metrics["Total PDF Count"],
+        "Similarity Ratios (Avg)": metrics["Average Text Similarity (Avg Score)"],
+        "Total Images": metrics["Total Images"],
+        "High Similarity Pairs (>90%)": metrics["High Similarity Pairs (>90%)"],
+        "Total Image Similarity Ratio": metrics["Average Image Similarity (Avg Score)"],
+        "High Image Similarity Pairs (>90%)": metrics["High Image Similarity Pairs (>90%)"]
     }
 
-    # index.html’e render ile gönderiyoruz.
-    return render_template('index.html', tables=all_data, summary=final_summary)
+    # -----------------------------
+    # Chart.js için örnek veri
+    # -----------------------------
+    charts_data = {
+        "pdf_labels": ["PDF1", "PDF2", "PDF3", "PDF4"],
+        "text_similarity": [78, 85, 92, 88],
+        "image_similarity": [65, 90, 75, 80]
+    }
 
+    return render_template(
+        "index.html",
+        tables=tables,
+        summary=final_summary,
+        charts_data=charts_data
+    )
 
 # ============================================================
-# --- SERVER START ---
-# ============================================================
-# Flask uygulamasını başlatır. "debug=True" sayesinde,
-# kodda değişiklik yaptığında otomatik yeniden başlatılır.
+# SERVER START
 # ============================================================
 
 if __name__ == '__main__':
