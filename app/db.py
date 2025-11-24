@@ -49,7 +49,9 @@ def create_tables(conn):
         lev_ratio REAL,
         jaro REAL,
         dice REAL,
-        avg_score REAL
+        tfidf_cosine REAL,
+        avg_score REAL,
+        passed_threshold INTEGER
     );
 
     -- Hira

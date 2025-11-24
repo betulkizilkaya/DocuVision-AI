@@ -1,12 +1,13 @@
 import sqlite3
-from pathlib import Path
+import textdistance as td
 import unicodedata
+import numpy as np
 import re
 
 from rapidfuzz.fuzz import ratio as lev_ratio
-import textdistance as td
+from pathlib import Path
 from sklearn.feature_extraction.text import TfidfVectorizer
-import numpy as np
+
 
 # Proje yolları
 APP_DIR  = Path(__file__).resolve().parent
@@ -23,7 +24,6 @@ PREFIX_LEN = 2 #Aynı ilk N harf (bloklama). Düşürürsek hız düşer, recall
 THRESH = 0.90 # %90 eşik
 COMPARE_WITHIN_FILE = True # aynı dosya içi karşılaştırma
 COMPARE_ACROSS_FILES = True # farklı dosyalar arası karşılaştırma
-
 
 _norm_space = re.compile(r"\s+")
 
