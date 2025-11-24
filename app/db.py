@@ -80,15 +80,26 @@ def create_tables(conn):
         ssim REAL,
         phash REAL,
         orb REAL,
+        akaze REAL,
         avg_similarity REAL
     );
 
-    CREATE TABLE IF NOT EXISTS binary_similarity(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    file_id_a INTEGER,        
-    file_id_b INTEGER,        
-    similarity_ratio REAL,           -- binary düzeyde hesaplanan benzerlik oranı
-    longest_match_size INTEGER,      -- en uzun ortak binary kısmın boyutu (byte)
+    CREATE TABLE IF NOT EXISTS binary_similarity
+    (
+        id
+        INTEGER
+        PRIMARY
+        KEY
+        AUTOINCREMENT,
+        file_id_a
+        INTEGER,
+        file_id_b
+        INTEGER,
+        similarity_ratio
+        REAL,   -- binary düzeyde hesaplanan benzerlik oranı
+        longest_match_size
+        INTEGER -- en uzun ortak binary kısmın boyutu (byte)
+    );
     """)
     conn.commit()
     print("Tables created successfully")
