@@ -30,7 +30,7 @@ def create_tables(conn):
 
     --aynı dosya iki kez eklenmesin diye
     CREATE UNIQUE INDEX IF NOT EXISTS ux_file_name_hash
-      ON file_index(filename, sha256);
+        ON file_index(filename, sha256);
 
     CREATE TABLE IF NOT EXISTS text_lines(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -103,7 +103,7 @@ def create_tables(conn):
         longest_match_size
         INTEGER -- en uzun ortak binary kısmın boyutu (byte)
     );
-        
+
     CREATE TABLE IF NOT EXISTS ocr_extracts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         image_id INTEGER UNIQUE,  
@@ -111,7 +111,40 @@ def create_tables(conn):
         FOREIGN KEY(image_id) REFERENCES pdf_images(id)
     );
         
+    
+        -- Metinden çıkarılan ham entity’ler (satır bazlı)
+    CREATE TABLE IF NOT EXISTS entities_raw(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        line_id INTEGER NOT NULL,
+        ent_text TEXT NOT NULL,
+        ent_type TEXT NOT NULL,   -- PERSON / ORG vb.
+        norm_text TEXT,           -- normalize edilmiş versiyon
+        FOREIGN KEY (line_id) REFERENCES text_lines(id)
+    );
+
+    -- Normalize edilmiş kişi isimleri (tekilleştirilmiş)
+    CREATE TABLE IF NOT EXISTS persons(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        norm_name TEXT NOT NULL UNIQUE
+    );
+
+    -- Her mention’ı hangi kişiye bağladık
+    CREATE TABLE IF NOT EXISTS person_mentions(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        person_id INTEGER NOT NULL,
+        line_id INTEGER NOT NULL,
+        raw_name TEXT NOT NULL,
+        FOREIGN KEY (person_id) REFERENCES persons(id),
+        FOREIGN KEY (line_id) REFERENCES text_lines(id)
+    );
+
     """)
+    # file_index'e doc_type kolonu ekle (yoksa)
+    cursor.execute("PRAGMA table_info(file_index)")
+    cols = {row[1] for row in cursor.fetchall()}
+    if "doc_type" not in cols:
+        cursor.execute("ALTER TABLE file_index ADD COLUMN doc_type TEXT")
+
     conn.commit()
     print("Tables created successfully")
 
