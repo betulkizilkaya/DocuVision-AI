@@ -103,6 +103,14 @@ def create_tables(conn):
         longest_match_size
         INTEGER -- en uzun ortak binary kısmın boyutu (byte)
     );
+        
+    CREATE TABLE IF NOT EXISTS ocr_extracts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        image_id INTEGER UNIQUE,  
+        text_raw TEXT,   --düz okuma sonucu alınan metin
+        FOREIGN KEY(image_id) REFERENCES pdf_images(id)
+    );
+        
     """)
     conn.commit()
     print("Tables created successfully")
