@@ -1,71 +1,70 @@
 # app/classify_pdfs.py
 
-import logging
-import sqlite3
 from pathlib import Path
+import sqlite3
 
-import pdfplumber
+from app.doc_classifier import predict_doc_type, load_model
+from app.text_ops import (
+    DATA_DIR,          # data klasörünün yolu
+    DB_PATH,           # db/corpus.sqlite yolu
+    extract_text_lines,
+    get_or_create_file,
+)
 
-from app.doc_classifier import load_model, predict_doc_type
-
-# Proje kökü, data ve db yolları
-ROOT_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = ROOT_DIR / "data"
-DB_PATH = ROOT_DIR / "db" / "corpus.sqlite"
-
-
-def ensure_doc_type_column(conn):
-    """
-    file_index tablosunda doc_type kolonu yoksa ekler.
-    """
+def ensure_doc_type_column(conn: sqlite3.Connection):
+    """file_index tablosunda doc_type kolonu yoksa ekler."""
     cur = conn.cursor()
-    cur.execute("PRAGMA table_info(file_index)")
-    cols = [row[1] for row in cur.fetchall()]
-
-    if "doc_type" not in cols:
-        print("[DB] file_index tablosuna doc_type kolonu ekleniyor...")
+    try:
         cur.execute("ALTER TABLE file_index ADD COLUMN doc_type TEXT")
         conn.commit()
-        print("[DB] doc_type kolonu eklendi.")
+    except sqlite3.OperationalError:
+        # Kolon zaten varsa buraya düşer, sorun değil.
+        pass
 
+def extract_full_text(pdf_path: Path) -> str:
+    """
+    text_ops.extract_text_lines çıktısındaki satırları birleştirip
+    tek bir büyük metin haline getirir.
+    """
+    lines = extract_text_lines(pdf_path)  # [(page_no, line_no, text, length), ...]
+    return "\n".join(text for (_p, _ln, text, _L) in lines)
 
 def main():
-    # pdfminer uyarı spam'ini susturmak istersen:
-    logging.getLogger("pdfminer").setLevel(logging.ERROR)
-
-    # Modeli yükle
+    # Modeli yükle (eğitimde nereye kaydettiysen aynı path'i kullanıyor olmalı)
     model = load_model()
 
-    # Veritabanına bağlan
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(str(DB_PATH))
+    ensure_doc_type_column(conn)
     cur = conn.cursor()
 
-    # Gerekirse doc_type kolonunu ekle
-    ensure_doc_type_column(conn)
+    pdf_files = sorted(DATA_DIR.glob("*.pdf"))
+    if not pdf_files:
+        raise SystemExit(f"❌ {DATA_DIR} içinde .pdf dosyası bulunamadı.")
 
-    # data klasöründeki tüm pdf'leri tara
-    for pdf_path in DATA_DIR.glob("*.pdf"):
+    for pdf_path in pdf_files:
         print(f"[PDF] {pdf_path.name} sınıflandırılıyor...")
 
-        # PDF'ten metni çıkar
-        with pdfplumber.open(pdf_path) as pdf:
-            text = "\n".join(page.extract_text() or "" for page in pdf.pages)
+        full_text = extract_full_text(pdf_path)
+        if not full_text.strip():
+            print("   -> Metin çıkarılamadı (tamamen görsel olabilir), atlanıyor.")
+            continue
 
-        # Tür tahmini
-        label = predict_doc_type(text, model=model)
+        # Modelden tahmin al
+        label = predict_doc_type(full_text, model=model)
         print(f"   -> Tahmin edilen tür: {label}")
 
-        # DB'de ilgili kaydı güncelle
-        # Burada file_index.filename kolonu PDF dosya adı ile eşleşiyor varsayıyoruz
+        # file_index kaydını bul / oluştur
+        file_id = get_or_create_file(conn, pdf_path)
+
+        # doc_type alanını güncelle
         cur.execute(
-            "UPDATE file_index SET doc_type = ? WHERE filename = ?",
-            (label, pdf_path.name)
+            "UPDATE file_index SET doc_type = ? WHERE id = ?",
+            (label, file_id),
         )
+        conn.commit()
 
-    conn.commit()
     conn.close()
-    print("\n[OK] Tüm PDF'ler için doc_type DB'ye kaydedildi.")
-
+    print("\n[OK] Tüm PDF'ler sınıflandırıldı ve veritabanına yazıldı.")
 
 if __name__ == "__main__":
     main()

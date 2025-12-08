@@ -11,17 +11,14 @@ DATA_DIR = ROOT_DIR / "data"
 def main():
     DATA_DIR.mkdir(exist_ok=True)
 
-    # BURAYI İSTEDİĞİN GİBİ DÜZENLEYEBİLİRSİN
     # Her PDF'e elle bir label veriyoruz
     pdf_labels = {
         "texas_pdf.pdf": "tournament_report",
         "Texas-Knights - Nov-Dec-2023.pdf": "tournament_report",
         "Encyclopedia of Chess Miniatures (2014).pdf": "book_chapter",
-        "Chess Tactics for the Tournament Player.pdf": "book_chapter",
-        "700 Opening Traps (2010) by Bill Wall.pdf": "book_chapter",
         "Test Your Chess - Assess and Improve Your Chess Skills.pdf": "book_chapter",
-        # ileride makale türü pdf eklersen:
-        # "Some-Article.pdf": "article",
+        "OSD Satranç Ders Notları.pdf": "book_chapter",
+        "satrancailkadim.pdf": "book_chapter",
     }
 
     rows = []
