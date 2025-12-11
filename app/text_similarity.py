@@ -21,7 +21,6 @@ MAX_LEN = 300 # Satır filtresi
 LENGTH_TOL = 10 #Uzunluk toleransı (|len(a)-len(b)| ≤ 10) Metinlerin uzunluğu farklıysa ama anlam aynıysa (ör. küçük ekler) toleransı artırabilirsin
 PREFIX_LEN = 2 #Aynı ilk N harf (bloklama). Düşürürsek hız düşer, recall artar; yükseltirsek hız artar, recall düşer.
 
-THRESH = 0.90 # %90 eşik
 COMPARE_WITHIN_FILE = True # aynı dosya içi karşılaştırma
 COMPARE_ACROSS_FILES = True # farklı dosyalar arası karşılaştırma
 
@@ -181,32 +180,33 @@ def main():
             g_a = global_idx[ia]
             g_b = global_idx[ib]
 
-            lev = lev_ratio(txt_a, txt_b) / 100.0            #Levenshtein: edit mesafesi tabanlı oran (yazım farklarına duyarlı).
-            jaro = td.jaro_winkler(txt_a, txt_b)             #Jaro-Winkler: yazım hatalarına esnek, kısa stringlerde iyi.
-            dice = td.dice.distance(txt_a, txt_b)            #Dice: karakter/kelime çifti benzerliği (yapısal).
+            lev = lev_ratio(txt_a, txt_b) / 100.0            # Levenshtein
+            jaro = td.jaro_winkler(txt_a, txt_b)             # Jaro-Winkler
+            dice = td.dice.distance(txt_a, txt_b)            # Dice distance
             dice = 1.0 - dice
-            tfidf = cosine_from_sparse_row(X, g_a, g_b)      #TF-IDF cosine: anlam temelli (kelime önemine bakar).
+            tfidf = cosine_from_sparse_row(X, g_a, g_b)      # TF-IDF cosine
             jacc = jaccard_tokens(txt_a, txt_b)
 
             avg = (lev + jaro + dice + tfidf + jacc) / 5.0
-            passed = 1 if avg >= THRESH else 0
 
-            if passed:
-                a, b = (lid_a, lid_b) if lid_a < lid_b else (lid_b, lid_a)
-                try:
-                    cur.execute("""
-                                INSERT INTO text_similarity
-                                (line_id_a, line_id_b, lev_ratio, jaro, dice, tfidf_cosine, jaccard_tokens, avg_score,
-                                 passed_threshold)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                                """, (a, b, lev, jaro, dice, tfidf, jacc, avg, passed))
-                    inserted += 1
-                except sqlite3.IntegrityError:
-                    pass
+            # EŞİK YOK: her adayı kaydet
+            a, b = (lid_a, lid_b) if lid_a < lid_b else (lid_b, lid_a)
+
+            try:
+                cur.execute("""
+                    INSERT INTO text_similarity
+                    (line_id_a, line_id_b, lev_ratio, jaro, dice,
+                     tfidf_cosine, jaccard_tokens, avg_score)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (a, b, lev, jaro, dice, tfidf, jacc, avg))
+                inserted += 1
+            except sqlite3.IntegrityError:
+                # Aynı çifti ikinci kez eklemeye çalışırsan buraya düşer
+                pass
 
         conn.commit()
 
-    print(f"✓ Tamamlandı. Kontrol edilen aday çift: {checked_pairs:,} | Kaydedilen ≥{int(THRESH*100)}%: {inserted:,}")
+    print(f"✓ Tamamlandı. Kontrol edilen aday çift: {checked_pairs:,} | Kaydedilen satır: {inserted:,}")
     conn.close()
 
 if __name__ == "__main__":

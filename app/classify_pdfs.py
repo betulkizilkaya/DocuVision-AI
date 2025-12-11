@@ -3,8 +3,8 @@
 from pathlib import Path
 import sqlite3
 
-from app.doc_classifier import predict_doc_type, load_model
-from app.text_ops import (
+from app import predict_doc_type, load_model
+from app import (
     DATA_DIR,          # data klasörünün yolu
     DB_PATH,           # db/corpus.sqlite yolu
     extract_text_lines,
