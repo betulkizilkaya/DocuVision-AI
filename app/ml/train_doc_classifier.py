@@ -3,8 +3,6 @@
 import pandas as pd
 from pathlib import Path
 
-from app import train_doc_classifier
-
 ROOT_DIR = Path(__file__).resolve().parents[1]
 DATASET_PATH = ROOT_DIR / "data" / "doc_type_dataset.csv"
 
