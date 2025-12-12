@@ -110,7 +110,7 @@ def create_tables(conn):
         text_raw TEXT,   --düz okuma sonucu alınan metin
         FOREIGN KEY(image_id) REFERENCES pdf_images(id)
     );
-        
+    
     
         -- Metinden çıkarılan ham entity’ler (satır bazlı)
     CREATE TABLE IF NOT EXISTS entities_raw(

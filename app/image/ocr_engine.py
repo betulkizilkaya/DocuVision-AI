@@ -68,6 +68,13 @@ def run_ocr(img):
         if img.width < 20 or img.height < 10:
             return None
 
+        # 1. Önce Gri Tona (Grayscale) Çevir
+        img = img.convert('L')
+
+        # 2. (Opsiyonel ama önerilir) Siyah-Beyaz (Binary) Yap - Thresholding
+        # Piksel değeri 128'den küçükse siyah (0), büyükse beyaz (255) yap.
+        img = img.point(lambda x: 0 if x < 128 else 255, '1')
+
         # B. Kenar Boşluğu Ekle (Nefes Payı)
         img = add_padding(img)
 
