@@ -1,17 +1,23 @@
 import sqlite3
-from flask import Flask, render_template, g
+from flask import Flask, render_template, g, request, url_for, send_from_directory
 import os
 import base64
-
+from pathlib import Path
 
 # ------------------------------------------------------------
 # Dosya Yolları
 # ------------------------------------------------------------
+# BASE_DIR = app/web/
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# DB_PATH = app/web/ -> ../.. (app/) -> ../../db/corpus.sqlite (ProjectNexus'a göre)
 DB_PATH = os.path.join(BASE_DIR, '..', '..', 'db', 'corpus.sqlite')
 
+# Thumbnail’lerin kaydedileceği klasör (ROOT_DIR / temp / images)
+THUMBNAIL_DIR = os.path.join(BASE_DIR, '..', '..', 'temp', 'images')
+
 app = Flask(__name__)
+
 
 # ============================================================
 # DATABASE CONNECTION
@@ -21,16 +27,18 @@ def get_db():
     db = getattr(g, '_database', None)
     if db is None:
         # BURAYA YENİDEN EKLEYİN:
-        print(f"HATA OLUŞAN TAM YOL: {DB_PATH}") 
+        print(f"HATA OLUŞAN TAM YOL: {DB_PATH}")
         db = g._database = sqlite3.connect(DB_PATH)  # Hata burada oluşuyor
         db.row_factory = sqlite3.Row
     return db
+
 
 @app.teardown_appcontext
 def close_connection(exception):
     db = getattr(g, '_database', None)
     if db is not None:
         db.close()
+
 
 # ============================================================
 # SUMMARY METRICS
@@ -95,6 +103,7 @@ def get_summary_metrics():
 
     return metrics
 
+
 # ============================================================
 # GENERIC TABLE FETCHER
 # ============================================================
@@ -112,17 +121,24 @@ def get_table_data(table_name):
     except Exception as e:
         return ["Error"], [[f"Could not retrieve data: {e}"]]
 
+
 # ============================================================
 # IMAGE BASE64 + COLOR FORMATTER
 # ============================================================
 
 def format_visual_columns(table_name, columns, rows):
-    try: blob_index = columns.index('blob')
-    except: blob_index = -1
-    try: thumb_index = columns.index('thumbnail_base64')
-    except: thumb_index = -1
-    try: colors_index = columns.index('top_colors')
-    except: colors_index = -1
+    try:
+        blob_index = columns.index('blob')
+    except:
+        blob_index = -1
+    try:
+        thumb_index = columns.index('thumbnail_base64')
+    except:
+        thumb_index = -1
+    try:
+        colors_index = columns.index('top_colors')
+    except:
+        colors_index = -1
 
     if blob_index == -1 and thumb_index == -1 and colors_index == -1:
         return rows
@@ -157,6 +173,7 @@ def format_visual_columns(table_name, columns, rows):
         new_rows.append(row)
     return new_rows
 
+
 # ============================================================
 # ALL TABLES GETTER
 # ============================================================
@@ -175,12 +192,97 @@ def get_all_tables():
 
     return data
 
+
 # ============================================================
-# MAIN ROUTE
+# NEW ROUTE: THUMBNAIL SERVER
+# ============================================================
+
+@app.route('/static/images/<filename>')
+def static_images(filename):
+    """
+    Thumbnail görsellerini temp/images klasöründen sunar.
+    pathlib yerine os.path kullanıldı.
+    """
+    # Görüntüleri temp/images klasöründen güvenli bir şekilde sunar.
+    return send_from_directory(THUMBNAIL_DIR, filename)
+
+
+# ============================================================
+# NEW ROUTE: PDF DETAIL AND CHESSBOARD FILTER
+# ============================================================
+
+@app.route('/pdf/<int:file_id>')
+def pdf_detail(file_id):
+    """
+    Belirli bir PDF'e ait görselleri ve satranç tahtası bayraklarını listeler.
+    Filtre: ?filter=chessboard veya ?filter=non_chessboard
+    """
+    db = get_db()
+
+    # 1. PDF Adını Çek
+    pdf_row = db.execute("SELECT filename FROM file_index WHERE id = ?", (file_id,)).fetchone()
+    if pdf_row is None:
+        return "404 - PDF Bulunamadı", 404
+    pdf_name = pdf_row['filename']
+
+    # 2. Filtreleme Mantığı
+    filter_type = request.args.get('filter', 'all')
+
+    sql_condition = ""
+    if filter_type == 'chessboard':
+        sql_condition = "AND T2.is_chessboard = 1"
+    elif filter_type == 'non_chessboard':
+        sql_condition = "AND (T2.is_chessboard = 0 OR T2.is_chessboard IS NULL)"  # Tahta olmadığı kesinleşenler veya henüz işlenmemiş olanlar
+
+    # 3. Görsel Bilgilerini Çek (image_features tablosundan bayraklar dahil)
+    # T1: pdf_images, T2: image_features
+    query = f"""
+            SELECT 
+                T1.page_no, T1.image_index, T2.is_chessboard, T2.chessboard_score
+            FROM pdf_images T1
+            INNER JOIN image_features T2 ON T1.id = T2.image_id
+            WHERE T1.file_id = ? {sql_condition}
+            ORDER BY T1.page_no, T1.image_index
+            """
+    images = db.execute(query, (file_id,)).fetchall()
+
+    # 4. Verileri Arayüz İçin Hazırla
+    processed_images = []
+    # os.path.splitext ile dosya adından uzantıyı çıkar
+    pdf_stem = os.path.splitext(pdf_name)[0]
+
+    for row in images:
+        # Thumbnail dosya adı formatı: [PDF_adi]_p[sayfa_no]_[gorsel_index].png (pdf_extract.py'den geliyor)
+        thumb_name = f"{pdf_stem}_p{row['page_no']}_{row['image_index']}.png"
+
+        processed_images.append({
+            'page': row['page_no'],
+            'index': row['image_index'],
+            'is_chessboard': row['is_chessboard'] if row['is_chessboard'] is not None else 0,
+            'score': f"{row['chessboard_score']:.2f}" if row['chessboard_score'] is not None else "0.00",
+            'thumbnail_url': url_for('static_images', filename=thumb_name)
+        })
+
+    return render_template(
+        'pdf_detail.html',
+        pdf_name=pdf_name,
+        images=processed_images,
+        file_id=file_id,
+        current_filter=filter_type
+    )
+
+
+# ============================================================
+# MAIN ROUTE (GÜNCELLENDİ)
 # ============================================================
 
 @app.route('/')
 def index():
+    db = get_db()
+
+    # Tüm PDF'leri çek (Detay sayfasına link vermek için)
+    pdf_rows = db.execute("SELECT id, filename, doc_type FROM file_index ORDER BY filename").fetchall()
+
     tables = get_all_tables()
     metrics = get_summary_metrics()
 
@@ -206,8 +308,10 @@ def index():
         "index.html",
         tables=tables,
         summary=final_summary,
-        charts_data=charts_data
+        charts_data=charts_data,
+        pdfs=pdf_rows  # Yeni ekleme: Index sayfasında PDF'leri listeleyebilmek için
     )
+
 
 # ============================================================
 # SERVER START

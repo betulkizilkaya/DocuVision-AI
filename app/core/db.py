@@ -2,14 +2,15 @@ import sqlite3
 import os
 from pathlib import Path
 
-# Bu dosyanın bulunduğu klasör (örnek: app/)
+# Bu dosyanın bulunduğu klasör (örnek: app/core/)
 APP_DIR = Path(__file__).resolve().parent
 
 # Proje kökü = app'in bir üstü
-ROOT_DIR = APP_DIR.parent
+ROOT_DIR = APP_DIR.parent.parent  # db.py'nin app/core/ içinde olduğunu varsayarak 2 seviye yukarı çıkılır
 
 # Veritabanı yolu (app'in dışında, kökte)
 DB_PATH = ROOT_DIR / "db" / "corpus.sqlite"
+
 
 def create_connection(db_file=DB_PATH):
     os.makedirs(os.path.dirname(db_file), exist_ok=True)
@@ -25,7 +26,7 @@ def create_tables(conn):
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         filename TEXT,
         path TEXT,
-        sha256 TEXT   --dosya tekrarını onler
+        sha256 TEXT     --dosya tekrarını onler
     );
 
     --aynı dosya iki kez eklenmesin diye
@@ -61,19 +62,19 @@ def create_tables(conn):
         file_id INTEGER,          
         page_no INTEGER,
         image_index INTEGER,
-        sha256 TEXT,     --image tekrarını onler
+        sha256 TEXT,      --image tekrarını onler
         blob BLOB
     );
 
     CREATE TABLE IF NOT EXISTS image_features(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        image_id INTEGER,         
+        image_id INTEGER,           
         width INTEGER,
         height INTEGER,
-        aspect_ratio REAL,        ----oran hesap
-        is_square INTEGER,        -- %90 kare kurali
-        is_grayscale INTEGER,     -- 1 siyah-beyaz, 0 renkli
-        top_colors TEXT           -- ilk 5 renk (JSON formatında) (SQLite tuple veya list tanımaz)
+        aspect_ratio REAL,          ----oran hesap
+        is_square INTEGER,          -- %90 kare kurali
+        is_grayscale INTEGER,       -- 1 siyah-beyaz, 0 renkli
+        top_colors TEXT             -- ilk 5 renk (JSON formatında) (SQLite tuple veya list tanımaz)
     );
 
     CREATE TABLE IF NOT EXISTS image_similarity(
@@ -106,19 +107,19 @@ def create_tables(conn):
 
     CREATE TABLE IF NOT EXISTS ocr_extracts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        image_id INTEGER UNIQUE,  
-        text_raw TEXT,   --düz okuma sonucu alınan metin
+        image_id INTEGER UNIQUE,    
+        text_raw TEXT,  --düz okuma sonucu alınan metin
         FOREIGN KEY(image_id) REFERENCES pdf_images(id)
     );
-        
-    
-        -- Metinden çıkarılan ham entity’ler (satır bazlı)
+
+
+    -- Metinden çıkarılan ham entity’ler (satır bazlı)
     CREATE TABLE IF NOT EXISTS entities_raw(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         line_id INTEGER NOT NULL,
         ent_text TEXT NOT NULL,
-        ent_type TEXT NOT NULL,   -- PERSON / ORG vb.
-        norm_text TEXT,           -- normalize edilmiş versiyon
+        ent_type TEXT NOT NULL,     -- PERSON / ORG vb.
+        norm_text TEXT,             -- normalize edilmiş versiyon
         FOREIGN KEY (line_id) REFERENCES text_lines(id)
     );
 
@@ -139,7 +140,24 @@ def create_tables(conn):
     );
 
     """)
-    # file_index'e doc_type kolonu ekle (yoksa)
+
+    # ------------------------------------------------------------
+    # SİZİN GÖREVİNİZ (ALTER TABLE) BURAYA EKLENMİŞTİR:
+    # ------------------------------------------------------------
+
+    # image_features tablosuna is_chessboard ve chessboard_score kolonu ekle (yoksa)
+    cursor.execute("PRAGMA table_info(image_features)")
+    cols = {row[1] for row in cursor.fetchall()}
+
+    if "is_chessboard" not in cols:
+        print("[DB] ALTER TABLE: image_features tablosuna is_chessboard eklendi.")
+        cursor.execute("ALTER TABLE image_features ADD COLUMN is_chessboard INTEGER")
+
+    if "chessboard_score" not in cols:
+        print("[DB] ALTER TABLE: image_features tablosuna chessboard_score eklendi.")
+        cursor.execute("ALTER TABLE image_features ADD COLUMN chessboard_score REAL")
+
+    # file_index'e doc_type kolonu ekle (mevcut mantık)
     cursor.execute("PRAGMA table_info(file_index)")
     cols = {row[1] for row in cursor.fetchall()}
     if "doc_type" not in cols:
@@ -148,7 +166,8 @@ def create_tables(conn):
     conn.commit()
     print("Tables created successfully")
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     conn = create_connection()
     create_tables(conn)
     conn.close()

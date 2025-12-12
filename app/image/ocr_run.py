@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from PIL import Image
 
-import ocr_engine
+from app.image import ocr_engine
 
 CURRENT_FILE = Path(__file__).resolve()
 IMAGE_DIR = CURRENT_FILE.parent

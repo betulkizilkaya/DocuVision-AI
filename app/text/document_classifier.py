@@ -1,4 +1,4 @@
-# app/doc_classifier.py
+# app/document_classifier.py
 
 from pathlib import Path
 import joblib
