@@ -1,9 +1,7 @@
 # app/core/pipeline.py (NİHAİ VE KESİNLİKLE ÇALIŞMASI GEREKEN VERSİYON)
 
-import sqlite3
 import os
 import sys
-from pathlib import Path
 
 # --- YOL MANİPÜLASYONU (Tüm hataları atlamak için) ---
 # BASE_DIR: app/core/ dizinini verir

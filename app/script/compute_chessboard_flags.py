@@ -5,6 +5,7 @@ import numpy as np
 from pathlib import Path
 from PIL import Image
 
+
 # --- YOL VE BAĞLANTI AYARLARI ---
 # BASE_DIR: app/core/script/
 BASE_DIR = Path(__file__).resolve().parent
@@ -18,9 +19,7 @@ ROOT_DIR = APP_DIR.parent
 # Veritabanı yolu
 DB_PATH = ROOT_DIR / "db" / "corpus.sqlite"
 
-# Model Yolu GÜNCELLENDİ: data/models/chessboard_clf.joblib
-MODEL_PATH = ROOT_DIR / "data" / "models" / "doc_type_clf.joblib"
-
+MODEL_PATH = ROOT_DIR / "data" / "models" / "chessboard_clf.joblib"
 
 def create_connection():
     return sqlite3.connect(DB_PATH)
