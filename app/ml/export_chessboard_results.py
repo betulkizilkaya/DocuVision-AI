@@ -9,6 +9,7 @@ OUT_DIR = ROOT_DIR / "temp" / "chessboard_exports"
 OUT_CHESS = OUT_DIR / "chessboard"
 OUT_NOT = OUT_DIR / "not_chessboard"
 
+
 LIMIT = None  # hepsi için None, denemek için 200 gibi sayı yazabilirsin
 
 def main():
