@@ -8,11 +8,9 @@ from rapidfuzz.fuzz import ratio as lev_ratio
 from pathlib import Path
 from sklearn.feature_extraction.text import TfidfVectorizer
 
+from app.core.paths import DB_PATH
 
-# Proje yolları
-APP_DIR  = Path(__file__).resolve().parent
-ROOT_DIR = APP_DIR.parent
-DB_PATH  = ROOT_DIR / "db" / "corpus.sqlite"
+conn = sqlite3.connect(str(DB_PATH))
 
 MIN_LEN = 20
 MAX_LEN = 300 # Satır filtresi

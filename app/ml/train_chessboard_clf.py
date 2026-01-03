@@ -23,7 +23,7 @@ def load_images(folder: Path, label: int):
             continue
         img = Image.open(p).convert("RGB").resize(IMG_SIZE)
         arr = np.array(img).astype(np.float32) / 255.0
-        X.append(arr.flatten())          # (64*64*3,)
+        X.append(arr.flatten())
         y.append(label)
     return X, y
 

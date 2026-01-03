@@ -4,17 +4,18 @@ import logging #Gereksiz uyarıları susturmak için
 from hashlib import sha256 #Dosyanın benzersiz “parmak izini” (hash) hesaplıyor
 from pathlib import Path #Dosya yollarını platformdan bağımsız yönetiyor.
 
+from app.core.paths import DATA_DIR, DB_PATH
+
 # Sadece hata mesajlarını göster (pdfminer uyarıları susar)
 logging.getLogger("pdfminer").setLevel(logging.ERROR)
 logging.getLogger("pdfplumber").setLevel(logging.ERROR)
 
 #Proje yapısına göre otomatik olarak yolları bulur
-APP_DIR  = Path(__file__).resolve().parent
-ROOT_DIR = APP_DIR.parent
-DATA_DIR = ROOT_DIR / "data"
-DB_PATH  = ROOT_DIR / "db" / "corpus.sqlite"
+TEXT_DIR = Path(__file__).resolve().parent       # app/text
+APP_DIR  = TEXT_DIR.parent                       # app
+ROOT_DIR = APP_DIR.parent                        # proje kökü (DocuVision-AI)
 
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)#Eğer db/ klasörü yoksa otomatik oluşturur.
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 #dosya parmak izi oluşturma
 def sha256_file(path: Path, chunk_size: int = 1 << 20) -> str:
