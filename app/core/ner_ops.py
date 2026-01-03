@@ -3,33 +3,8 @@ import sqlite3
 import unicodedata
 from typing import Iterable, List, Tuple, Optional
 from app.core.paths import DB_PATH
-print("[NER] DB_PATH =", DB_PATH.resolve())
 
 conn = sqlite3.connect(str(DB_PATH))
-import sqlite3
-from app.core.paths import DB_PATH
-
-conn = sqlite3.connect(str(DB_PATH))
-cur = conn.cursor()
-
-for t in ["file_index", "text_lines", "entities_raw", "persons", "person_mentions"]:
-    cur.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?", (t,))
-    exists = cur.fetchone()[0]
-    print(t, "exists?" , bool(exists))
-
-cur.execute("SELECT COUNT(*) FROM text_lines")
-print("text_lines count =", cur.fetchone()[0])
-
-cur.execute("SELECT COUNT(*) FROM entities_raw")
-print("entities_raw count =", cur.fetchone()[0])
-
-cur.execute("SELECT COUNT(*) FROM persons")
-print("persons count =", cur.fetchone()[0])
-
-cur.execute("SELECT COUNT(*) FROM person_mentions")
-print("person_mentions count =", cur.fetchone()[0])
-
-conn.close()
 
 _space = re.compile(r"\s+")
 _punct_edges = re.compile(r"^[\W_]+|[\W_]+$")
