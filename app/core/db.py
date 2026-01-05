@@ -59,11 +59,24 @@ def create_tables(conn):
     -- Hira
     CREATE TABLE IF NOT EXISTS pdf_images(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        file_id INTEGER,          
-        page_no INTEGER,
-        image_index INTEGER,
-        sha256 TEXT,      --image tekrarını onler
-        blob BLOB
+        file_id INTEGER NOT NULL,
+        page_no INTEGER NOT NULL,
+        image_index INTEGER NOT NULL,
+        
+        -- PDF içi kaynak bilgisi
+        xref INTEGER NOT NULL,      --object referance no
+        rect_i INTEGER NOT NULL,    -- number of repetitions for same xref
+
+
+        -- HASH'LER
+        sha256 TEXT NOT NULL,        -- RENDER (visible) hash
+        sha256_raw TEXT NOT NULL,    -- RAW (extract_image) hash
+
+        -- RENDER GÖRSEL
+        blob BLOB NOT NULL,
+
+        FOREIGN KEY (file_id) REFERENCES file_index(id),
+        UNIQUE (file_id, page_no, xref, rect_i)
     );
 
     CREATE TABLE IF NOT EXISTS image_features(
@@ -137,6 +150,15 @@ def create_tables(conn):
         FOREIGN KEY (person_id) REFERENCES persons(id),
         FOREIGN KEY (line_id) REFERENCES text_lines(id)
     );
+
+    -- Chessboard -> FEN 
+CREATE TABLE IF NOT EXISTS chess_fen(
+    file_id INTEGER PRIMARY KEY,
+    fen_format TEXT NOT NULL,
+    image_blob BLOB,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (file_id) REFERENCES file_index(id)
+);
 
     """)
 
