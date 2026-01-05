@@ -1,9 +1,7 @@
 import sqlite3, io
 from pathlib import Path
 from PIL import Image
-
-ROOT_DIR = Path(__file__).resolve().parents[2]  # repo root
-DB_PATH = ROOT_DIR / "db" / "corpus.sqlite"
+from app.core.paths import ROOT_DIR, DB_PATH
 
 OUT_DIR = ROOT_DIR / "temp" / "chessboard_exports"
 OUT_CHESS = OUT_DIR / "chessboard"
