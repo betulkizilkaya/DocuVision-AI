@@ -5,25 +5,13 @@ import numpy as np
 from pathlib import Path
 from PIL import Image
 
-
-# --- YOL VE BAĞLANTI AYARLARI ---
-# BASE_DIR: app/core/script/
-BASE_DIR = Path(__file__).resolve().parent
-
-# APP_DIR: app/core/
-APP_DIR = BASE_DIR.parent
-
-# ROOT_DIR: ProjectNexus-Intelligent-PDF-Analysis/
-ROOT_DIR = APP_DIR.parent
-
-# Veritabanı yolu
-DB_PATH = ROOT_DIR / "db" / "corpus.sqlite"
-
+from app.core.paths import DB_PATH, ROOT_DIR
 MODEL_PATH = ROOT_DIR / "data" / "models" / "chessboard_clf.joblib"
 
-def create_connection():
-    return sqlite3.connect(DB_PATH)
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
+def create_connection():
+    return sqlite3.connect(str(DB_PATH))
 
 # --- SINIFLANDIRICI (MODEL YÜKLEME VE ÖN İŞLEME) ---
 class ChessboardClassifier:
@@ -38,13 +26,10 @@ class ChessboardClassifier:
             raise FileNotFoundError(
                 f"❌ ML modeli bulunamadı: {model_path}. Lütfen arkadaşınızın modeli bu yola kaydettiğinden emin olun.")
 
-    def _preprocess(self, pil_image: Image) -> np.ndarray:
-        """PIL görüntüsünü modelin beklediği formata (Örn: 64x64 RGB) dönüştürür."""
-        # Varsayım: Model, 64x64 RGB görüntüsünü düzleştirilmiş (flattened) bekliyor.
-        img = pil_image.convert('RGB').resize((64, 64), Image.Resampling.LANCZOS)
-        img_array = np.array(img)
-        # Scikit-learn modelleri için 1D diziye dönüştür
-        return img_array.flatten().reshape(1, -1)
+    def _preprocess(self, pil_image: Image.Image) -> np.ndarray:
+        img = pil_image.convert("RGB").resize((64, 64), Image.Resampling.LANCZOS)
+        arr = np.array(img).astype(np.float32) / 255.0  # ✅ EKSİK OLAN BU
+        return arr.flatten().reshape(1, -1)
 
     def predict(self, blob_data: bytes):
         """BLOB verisini alır, işler ve is_chessboard, score döndürür."""
@@ -53,8 +38,12 @@ class ChessboardClassifier:
 
         # Modelden tahmin al (predict_proba ile skor çekilir)
         prediction_proba = self.model.predict_proba(preprocessed_data)[0]
-        score = prediction_proba[1]  # 1. sınıfın olasılığı (chessboard)
-        is_chessboard = 1 if score > 0.95 else 0  # %95 eşiği
+        proba = self.model.predict_proba(preprocessed_data)[0]
+        classes = list(self.model.classes_)
+        score = float(proba[classes.index(1)])  # label=1 chessboard
+
+        THRESHOLD = 0.35
+        is_chessboard = 1 if score >= THRESHOLD else 0
 
         return is_chessboard, float(score)
 

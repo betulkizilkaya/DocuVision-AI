@@ -4,18 +4,15 @@ from pathlib import Path
 from PIL import Image
 from collections import Counter
 
-# Yol yapılandırması
-APP_DIR = Path(__file__).resolve().parent
-ROOT_DIR = APP_DIR.parent
-DB_PATH = ROOT_DIR / "db" / "corpus.sqlite"
+from app.core.paths import DB_PATH
 
 # %90 karelik sınırı
 SQUARE_TOLERANCE = 0.9
 
 def create_connection():
-    conn = sqlite3.connect(DB_PATH)
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(DB_PATH))
     return conn
-
 
 def get_images(conn):
     cur = conn.cursor()

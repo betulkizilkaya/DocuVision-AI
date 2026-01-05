@@ -4,18 +4,9 @@ import hashlib       # Gorsellerin SHA256 hash degerini uretmek icin
 import io, os
 from pathlib import Path
 from PIL import Image    # Thumbnail (kucuk onizleme) olusturmak icin
+from app.core.paths import DB_PATH, ROOT_DIR, DATA_DIR
 
-# Bu dosyanın bulunduğu klasör (örnek: app/)
-APP_DIR = Path(__file__).resolve().parent
-
-# Proje kökü = app'in bir üstü
-ROOT_DIR = APP_DIR.parent
-
-# Veritabanı yolu (app'in dışında, kökte)
-DB_PATH = ROOT_DIR / "db" / "corpus.sqlite"
-
-# PDF dosyalarının bulunduğu klasör (app'in dışında, kökte)
-PDF_DIR = ROOT_DIR / "data"
+PDF_DIR = DATA_DIR  # data/ klasöründeki PDF’ler buradan okunacak
 
 # Thumbnail’lerin kaydedileceği klasör (app'in dışında, kökte)
 OUT_DIR = ROOT_DIR / "temp" / "images"
@@ -26,11 +17,10 @@ def sha256_bytes(data: bytes) -> str:
     """Verilen verinin SHA-256 hash'ini döndürür."""
     return hashlib.sha256(data).hexdigest()
 
-
 def create_connection(db_file=DB_PATH):
-    conn = sqlite3.connect(db_file)
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)  # db/ klasörü garanti
+    conn = sqlite3.connect(str(db_file))
     return conn
-
 
 def extract_images_from_pdf(pdf_path: Path, conn):
     """PDF içindeki tüm görselleri çıkarır ve pdf_images tablosuna kaydeder."""
