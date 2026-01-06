@@ -2,40 +2,38 @@ import sqlite3
 from flask import Flask, render_template, g, request, url_for, send_from_directory
 import os
 import base64
+import sys
 from pathlib import Path
 
-# ------------------------------------------------------------
-# Dosya Yolları
-# ------------------------------------------------------------
-# BASE_DIR = app/web/
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Proje kökünü sys.path'e ekle (script olarak çalıştırmak için)
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
 
-# DB_PATH = app/web/ -> ../.. (app/) -> ../../db/corpus.sqlite (ProjectNexus'a göre)
-DB_PATH = os.path.join(BASE_DIR, '..', '..', 'db', 'corpus.sqlite')
+from app.core.paths import DB_PATH, ROOT_DIR
+from app.core.db import init_db
 
-# Thumbnail’lerin kaydedileceği klasör (ROOT_DIR / temp / images)
-THUMBNAIL_DIR = os.path.join(BASE_DIR, '..', '..', 'temp', 'images')
+THUMBNAIL_DIR = ROOT_DIR / "temp" / "images"
+THUMBNAIL_DIR.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__)
 
+# DB şemasını garanti et (file_index dahil)
+init_db()
 
-# ============================================================
-# DATABASE CONNECTION
-# ============================================================
 
 def get_db():
-    db = getattr(g, '_database', None)
+    db = getattr(g, "_database", None)
     if db is None:
-        # BURAYA YENİDEN EKLEYİN:
-        print(f"HATA OLUŞAN TAM YOL: {DB_PATH}")
-        db = g._database = sqlite3.connect(DB_PATH)  # Hata burada oluşuyor
+        print(f"[DB] USING: {DB_PATH.resolve()}")
+        db = g._database = sqlite3.connect(str(DB_PATH), check_same_thread=False)
         db.row_factory = sqlite3.Row
+        db.execute("PRAGMA foreign_keys=ON;")
     return db
 
 
 @app.teardown_appcontext
-def close_connection(exception):
-    db = getattr(g, '_database', None)
+def close_connection(exception=None):
+    db = getattr(g, "_database", None)
     if db is not None:
         db.close()
 
@@ -204,7 +202,7 @@ def static_images(filename):
     pathlib yerine os.path kullanıldı.
     """
     # Görüntüleri temp/images klasöründen güvenli bir şekilde sunar.
-    return send_from_directory(THUMBNAIL_DIR, filename)
+    return send_from_directory(str(THUMBNAIL_DIR), filename)
 
 
 # ============================================================

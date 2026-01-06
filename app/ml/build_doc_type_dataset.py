@@ -1,17 +1,23 @@
-# app/build_doc_type_dataset.py
+# app/ml/build_doc_type_dataset.py
+
+import sys
+from pathlib import Path
 
 import pdfplumber
 import pandas as pd
-from pathlib import Path
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = ROOT_DIR / "data"
+# ------------------------------------------------------------
+# Proje kökü: .../ProjectNexus-Intelligent-PDF-Analysis
+# ------------------------------------------------------------
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from app.core.paths import DATA_DIR
 
 
 def main():
     DATA_DIR.mkdir(exist_ok=True)
 
-    # Her PDF'e elle bir label veriyoruz
     pdf_labels = {
         "texas_pdf.pdf": "tournament_report",
         "Texas-Knights - Nov-Dec-2023.pdf": "tournament_report",
@@ -31,7 +37,7 @@ def main():
 
         print(f"[OK] PDF okunuyor: {pdf_path.name}")
         with pdfplumber.open(pdf_path) as pdf:
-            text = "\n".join(page.extract_text() or "" for page in pdf.pages)
+            text = "\n".join((page.extract_text() or "") for page in pdf.pages)
 
         rows.append({"text": text, "label": label})
 
@@ -41,7 +47,7 @@ def main():
 
     df = pd.DataFrame(rows)
     csv_path = DATA_DIR / "doc_type_dataset.csv"
-    df.to_csv(csv_path, index=False)
+    df.to_csv(csv_path, index=False, encoding="utf-8")
     print(f"\n[OK] Dataset kaydedildi: {csv_path}")
     print(df.head())
 

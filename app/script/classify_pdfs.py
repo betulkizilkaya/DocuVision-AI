@@ -3,13 +3,10 @@
 from pathlib import Path
 import sqlite3
 
-from app import predict_doc_type, load_model
-from app import (
-    DATA_DIR,          # data klasörünün yolu
-    DB_PATH,           # db/corpus.sqlite yolu
-    extract_text_lines,
-    get_or_create_file,
-)
+
+from app.core.paths import DATA_DIR, DB_PATH
+from app.text.document_classifier import load_model, predict_doc_type
+from app.text.text_processor import extract_text_lines, get_or_create_file
 
 def ensure_doc_type_column(conn: sqlite3.Connection):
     """file_index tablosunda doc_type kolonu yoksa ekler."""

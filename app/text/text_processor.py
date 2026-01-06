@@ -6,6 +6,7 @@ from pathlib import Path #Dosya yollarını platformdan bağımsız yönetiyor.
 
 from app.core.paths import DATA_DIR, DB_PATH
 
+
 # Sadece hata mesajlarını göster (pdfminer uyarıları susar)
 logging.getLogger("pdfminer").setLevel(logging.ERROR)
 logging.getLogger("pdfplumber").setLevel(logging.ERROR)
@@ -43,45 +44,35 @@ def extract_text_lines(pdf_path: Path):
                     rows.append((page_no, line_no, line, len(line)))#Uygun satırlar bu şekilde kaydedilir.
     return rows
 
-def ensure_schema(conn: sqlite3.Connection):# tablo yapısı
-    cur = conn.cursor()
-    # PDF’nin adı, yolu ve hash değeri
-    # her PDF’ten çıkan satırlar
-    cur.executescript("""
-    CREATE TABLE IF NOT EXISTS file_index( 
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      filename TEXT,
-      path TEXT,
-      sha256 TEXT
-    );
-        
-    CREATE TABLE IF NOT EXISTS text_lines(
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      file_id INTEGER,
-      page_no INTEGER,
-      line_no INTEGER,
-      text   TEXT,
-      length INTEGER
-    );
-    CREATE UNIQUE INDEX IF NOT EXISTS ux_file_name_hash
-      ON file_index(filename, sha256);
-    CREATE INDEX IF NOT EXISTS idx_text_file ON text_lines(file_id);
-    """)
-    #UNIQUE INDEX → aynı dosyayı iki kez eklemeyi engeller.
-    #INDEX → aramaları hızlandırır.
-    conn.commit()
 
-def get_or_create_file(conn: sqlite3.Connection, pdf_path: Path) -> int:# Dosya kaydını yönetir
+def get_or_create_file(conn: sqlite3.Connection, pdf_path: Path) -> int:
     cur = conn.cursor()
     file_hash = sha256_file(pdf_path)
-    # Eğer aynı isim + aynı hash zaten varsa “IGNORE” eder. Yoksa yeni kayıt ekler.
+
+    # 1) Aynı standard: filename + sha256 ile insert
     cur.execute("""
-        INSERT OR IGNORE INTO file_index(filename, path, sha256)
-        VALUES (?, ?, ?)
-    """, (pdf_path.name, str(pdf_path), file_hash))
-    # Sonra o PDF’nin id değerini döner
-    cur.execute("SELECT id FROM file_index WHERE filename=? AND sha256=?", (pdf_path.name, file_hash))
-    return cur.fetchone()[0]
+        INSERT OR IGNORE INTO file_index(filename, sha256)
+        VALUES (?, ?)
+    """, (pdf_path.name, file_hash))
+
+    # 2) path boşsa doldur (varsa dokunma)
+    cur.execute("""
+        UPDATE file_index
+        SET path = COALESCE(path, ?)
+        WHERE filename = ? AND sha256 = ?
+    """, (str(pdf_path), pdf_path.name, file_hash))
+
+    conn.commit()
+
+    cur.execute(
+        "SELECT id FROM file_index WHERE filename=? AND sha256=?",
+        (pdf_path.name, file_hash)
+    )
+    row = cur.fetchone()
+    if row is None:
+        raise RuntimeError("file_index kaydı bulunamadı.")
+    return row[0]
+
 
 def replace_text_lines(conn: sqlite3.Connection, file_id: int, lines):
     # Aynı PDF için önce eski satırları siler, sonra yeni satırları ekler/idempotent
@@ -99,8 +90,11 @@ if __name__ == "__main__":
     if not DATA_DIR.exists():
         raise SystemExit(f"❌ data klasörü bulunamadı: {DATA_DIR}")
 
+    from app.core.db import init_db
+
+    init_db()
+
     conn = sqlite3.connect(str(DB_PATH))
-    ensure_schema(conn)
 
     pdf_files = sorted(DATA_DIR.glob("*.pdf"))
     if not pdf_files:
