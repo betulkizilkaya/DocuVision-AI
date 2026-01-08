@@ -1,28 +1,57 @@
 import sqlite3
 from pathlib import Path
 
-
-APP_DIR = Path(__file__).resolve().parent
-ROOT_DIR = APP_DIR.parent
-DB_PATH = ROOT_DIR / "db" / "corpus.sqlite"
+from app.core.paths import DB_PATH
 
 
-def clear_ocr_table():
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cur = conn.cursor()
+def create_connection() -> sqlite3.Connection:
+    conn = sqlite3.connect(
+        str(DB_PATH),
+        detect_types=sqlite3.PARSE_DECLTYPES,
+        check_same_thread=False,
+    )
+    conn.execute("PRAGMA foreign_keys=ON;")
+    return conn
 
-        # Sadece OCR tablosunun içindeki verileri siler (Tablo yapısı kalır)
-        cur.execute("DELETE FROM ocr_extracts")
-        conn.commit()
 
-        count = cur.rowcount
-        print(f"[✓] Temizlik tamamlandı. {count} adet hatalı/boş kayıt silindi.")
+def reset_image_similarity() -> None:
+    conn = create_connection()
+    cur = conn.cursor()
 
-        conn.close()
-    except Exception as e:
-        print(f"Hata: {e}")
+    print("[INFO] Dropping image_similarity table if exists...")
+    cur.execute("DROP TABLE IF EXISTS image_similarity;")
+
+    print("[INFO] Creating image_similarity table...")
+    cur.execute(
+        """
+        CREATE TABLE image_similarity (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            image_id_a INTEGER NOT NULL,
+            image_id_b INTEGER NOT NULL,
+
+            ssim REAL,
+            phash REAL,
+            orb REAL,
+            akaze REAL,
+
+            label TEXT NOT NULL,
+            decision_phase INTEGER NOT NULL,
+            reason TEXT,
+
+            FOREIGN KEY (image_id_a) REFERENCES pdf_images(id),
+            FOREIGN KEY (image_id_b) REFERENCES pdf_images(id),
+
+            UNIQUE (image_id_a, image_id_b)
+        );
+        """
+    )
+
+    conn.commit()
+    conn.close()
+
+    print("[✓] image_similarity table reset completed.")
 
 
 if __name__ == "__main__":
-    clear_ocr_table()
+    reset_image_similarity()

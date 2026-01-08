@@ -124,13 +124,28 @@ def create_tables(conn: sqlite3.Connection) -> None:
         -- -------------------------
         CREATE TABLE IF NOT EXISTS image_similarity(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            image_id_a INTEGER,
-            image_id_b INTEGER,
+
+            -- Karşılaştırılan görseller
+            image_id_a INTEGER NOT NULL,
+            image_id_b INTEGER NOT NULL,
+
+            -- Ara metrikler (debug / analiz için)
             ssim REAL,
             phash REAL,
             orb REAL,
             akaze REAL,
-            avg_similarity REAL
+
+            -- Nihai karar
+            label TEXT NOT NULL,          -- EXACT_DUPLICATE | NEAR_DUPLICATE | SIMILAR | NOT_SIMILAR | LOW_QUALITY
+            decision_phase INTEGER NOT NULL,       -- 1=hash, 2=phash, 3=ssim, 4=feature(orb-akaze) (for statistics)
+            reason TEXT,                  -- örn: "sha256", "phash+ssim", "ssim+orb"  (human-readable)
+
+            -- FK (opsiyonel ama doğru)
+            FOREIGN KEY (image_id_a) REFERENCES pdf_images(id),
+            FOREIGN KEY (image_id_b) REFERENCES pdf_images(id),
+
+            -- Aynı çifti ikinci kez yazma
+            UNIQUE (image_id_a, image_id_b)
         );
 
         -- -------------------------

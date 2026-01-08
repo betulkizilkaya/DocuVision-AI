@@ -1,90 +1,120 @@
 import sqlite3
 import io
-import os
-from pathlib import Path
+from typing import Optional, List, Tuple
+
 from PIL import Image
 
+from app.core.paths import DB_PATH
 from app.image import ocr_engine
 
-CURRENT_FILE = Path(__file__).resolve()
-IMAGE_DIR = CURRENT_FILE.parent
-ROOT_DIR = IMAGE_DIR.parent.parent
-DB_PATH = ROOT_DIR / "db" / "corpus.sqlite"
 
-
-def create_connection():
-    if not os.path.exists(DB_PATH.parent):
-        os.makedirs(DB_PATH.parent)
-    return sqlite3.connect(DB_PATH)
-
-
-def get_pending_images(conn):
+# ---------------------------
+# DB
+# ---------------------------
+def create_connection() -> sqlite3.Connection:
     """
-    Daha önce 'ocr_extracts' tablosuna HİÇ eklenmemiş görselleri getir.
+    db.py ile aynı bağlantı ayarları.
     """
-    cur = conn.cursor()
-    query = """
-            SELECT T1.id, T1.blob
-            FROM pdf_images T1
-                     LEFT JOIN ocr_extracts T2 ON T1.id = T2.image_id
-            WHERE T2.id IS NULL \
-            """
-    cur.execute(query)
-    return cur.fetchall()
+    conn = sqlite3.connect(
+        str(DB_PATH),
+        detect_types=sqlite3.PARSE_DECLTYPES,
+        check_same_thread=False,
+    )
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys=ON;")
+    return conn
 
 
-def save_result(conn, img_id, text):
+def get_pending_images(conn: sqlite3.Connection) -> List[tuple[int, bytes]]:
     """
-    Sonucu veritabanına yazar.
+    Daha önce ocr_extracts'e hiç yazılmamış (image_id yok) görselleri getir.
     """
     cur = conn.cursor()
-    cur.execute("""
-                INSERT INTO ocr_extracts (image_id, text_raw)
-                VALUES (?, ?)
-                """, (img_id, text))
+    cur.execute(
+        """
+        SELECT p.id AS image_id, p.blob AS blob
+        FROM pdf_images p
+        LEFT JOIN ocr_extracts o ON p.id = o.image_id
+        WHERE o.image_id IS NULL
+        ORDER BY p.file_id, p.page_no, p.image_index
+        """
+    )
+    rows = cur.fetchall()
+    return [(int(r["image_id"]), bytes(r["blob"])) for r in rows]
+
+
+def save_result(conn: sqlite3.Connection, image_id: int, text: Optional[str]) -> None:
+    """
+    Sonucu ocr_extracts tablosuna yazar.
+
+    db.py şeması:
+      ocr_extracts(image_id INTEGER UNIQUE, text_raw TEXT, FOREIGN KEY(image_id) REFERENCES pdf_images(id))
+    """
+    cur = conn.cursor()
+
+    # image_id UNIQUE olduğu için tekrar çalıştırmalarda hata vermesin
+    cur.execute(
+        """
+        INSERT OR REPLACE INTO ocr_extracts (image_id, text_raw)
+        VALUES (?, ?)
+        """,
+        (image_id, text),
+    )
     conn.commit()
 
 
-def process():
+# ---------------------------
+# MAIN
+# ---------------------------
+def process(*, skip_null_writes: bool = False) -> None:
+    """
+    skip_null_writes=False:
+      - OCR sonucu None olsa bile DB'ye NULL olarak yazar (idempotent, tekrar tarama yapmaz)
+    skip_null_writes=True:
+      - None ise DB'ye hiç yazmaz (sonra tekrar pending olarak gelir)
+    """
     conn = create_connection()
-    images = get_pending_images(conn)
+    try:
+        images = get_pending_images(conn)
 
-    print(f"[INFO] İşlenecek {len(images)} yeni görsel bulundu.")
-    print("-" * 50)
-    print(f"{'ID':<6} | {'DURUM':<35}")
-    print("-" * 50)
+        print(f"[INFO] İşlenecek {len(images)} yeni görsel bulundu.")
+        print("-" * 70)
+        print(f"{'ID':<8} | {'DURUM':<55}")
+        print("-" * 70)
 
-    success_count = 0
+        meaningful_count = 0
 
-    for img_id, blob in images:
-        try:
-            # Görseli aç
-            img = Image.open(io.BytesIO(blob))
+        for image_id, blob in images:
+            try:
+                img = Image.open(io.BytesIO(blob))
+                img.load()
 
-            # Motora gönder (Tek fonksiyon)
-            text_result = ocr_engine.run_ocr(img)
+                text_result = ocr_engine.run_ocr(img)  # None veya string
 
-            # Kaydet
-            save_result(conn, img_id, text_result)
+                if skip_null_writes and not text_result:
+                    # boş/gürültüyü DB'ye yazma; tekrar pending kalır
+                    continue
 
-            # Ekrana Bilgi Bas
-            if text_result:
-                # Metnin ilk 30 karakterini göster
-                preview = text_result[:30].replace('\n', ' ') + "..."
-                print(f"{img_id:<6} | {preview:<35}")
-                success_count += 1
-            else:
-                # Gürültü veya boş ise
-                # print(f"{img_id:<6} | [Boş/Gürültü - Kaydedilmedi]")
-                pass  # Konsolu kirletmemek için boşları yazmayabiliriz
+                save_result(conn, image_id, text_result)
 
-        except Exception as e:
-            print(f"Hata (ID: {img_id}): {e}")
+                if text_result:
+                    preview = text_result.replace("\n", " ")[:55]
+                    if len(text_result) > 55:
+                        preview += "..."
+                    print(f"{image_id:<8} | {preview:<55}")
+                    meaningful_count += 1
 
-    conn.close()
-    print("-" * 50)
-    print(f"[✓] İşlem tamamlandı. {success_count} görselden anlamlı metin çıkarıldı.")
+            except Exception as e:
+                # Hata durumunda da istersen DB'ye NULL yazıp "pending"den düşürebilirsin.
+                # Şimdilik sadece logluyoruz.
+                print(f"[ERROR] ID={image_id}: {e}")
+
+        print("-" * 70)
+        print(f"[✓] İşlem tamamlandı. {meaningful_count} görselden anlamlı metin çıkarıldı.")
+
+    finally:
+        conn.close()
 
 
 if __name__ == "__main__":
-    process()
+    process(skip_null_writes=False)
