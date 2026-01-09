@@ -1,57 +1,69 @@
 import sqlite3
-from pathlib import Path
-
-from app.core.paths import DB_PATH
+from app.core.paths import DB_PATH, ROOT_DIR
 
 
-def create_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(
-        str(DB_PATH),
-        detect_types=sqlite3.PARSE_DECLTYPES,
-        check_same_thread=False,
-    )
-    conn.execute("PRAGMA foreign_keys=ON;")
-    return conn
+# ---------------------------
+# DB PATHS
+# ---------------------------
+SRC_DB = ROOT_DIR / "db_eski4" / "corpus.sqlite"
+DST_DB = ROOT_DIR / "db" / "corpus.sqlite"
 
 
-def reset_image_similarity() -> None:
-    conn = create_connection()
+def copy_tables():
+    if not SRC_DB.exists():
+        raise FileNotFoundError(f"Kaynak DB bulunamadı: {SRC_DB}")
+
+    if not DST_DB.exists():
+        raise FileNotFoundError(f"Hedef DB bulunamadı: {DST_DB}")
+
+    conn = sqlite3.connect(DST_DB)
     cur = conn.cursor()
 
-    print("[INFO] Dropping image_similarity table if exists...")
-    cur.execute("DROP TABLE IF EXISTS image_similarity;")
+    # Foreign key geçici kapat
+    cur.execute("PRAGMA foreign_keys = OFF;")
 
-    print("[INFO] Creating image_similarity table...")
-    cur.execute(
-        """
-        CREATE TABLE image_similarity (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+    # Kaynak DB attach
+    cur.execute(f"ATTACH DATABASE '{SRC_DB.as_posix()}' AS src;")
 
-            image_id_a INTEGER NOT NULL,
-            image_id_b INTEGER NOT NULL,
+    try:
+        conn.execute("BEGIN;")
 
-            ssim REAL,
-            phash REAL,
-            orb REAL,
-            akaze REAL,
+        # -------------------------
+        # file_index
+        # -------------------------
+        cur.execute("""
+            INSERT INTO file_index (id, filename, path, sha256)
+            SELECT id, filename, path, sha256
+            FROM src.file_index;
+        """)
 
-            label TEXT NOT NULL,
-            decision_phase INTEGER NOT NULL,
-            reason TEXT,
+        # -------------------------
+        # pdf_images
+        # -------------------------
+        cur.execute("""
+            INSERT INTO pdf_images
+            (id, file_id, page_no, image_index,
+             xref, rect_i,
+             sha256, sha256_raw, blob)
+            SELECT
+             id, file_id, page_no, image_index,
+             xref, rect_i,
+             sha256, sha256_raw, blob
+            FROM src.pdf_images;
+        """)
 
-            FOREIGN KEY (image_id_a) REFERENCES pdf_images(id),
-            FOREIGN KEY (image_id_b) REFERENCES pdf_images(id),
+        conn.commit()
+        print("✅ db_eski4 → db corpus.sqlite aktarımı tamamlandı")
 
-            UNIQUE (image_id_a, image_id_b)
-        );
-        """
-    )
+    except Exception as e:
+        conn.rollback()
+        raise
 
-    conn.commit()
-    conn.close()
-
-    print("[✓] image_similarity table reset completed.")
+    finally:
+        cur.execute("DETACH DATABASE src;")
+        cur.execute("PRAGMA foreign_keys = ON;")
+        conn.close()
 
 
 if __name__ == "__main__":
-    reset_image_similarity()
+    copy_tables()

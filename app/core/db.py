@@ -200,11 +200,12 @@ def create_tables(conn: sqlite3.Connection) -> None:
         -- CHESS FEN
         -- -------------------------
         CREATE TABLE IF NOT EXISTS chess_fen(
-            file_id INTEGER PRIMARY KEY,
+            image_id INTEGER PRIMARY KEY,
             fen_format TEXT NOT NULL,
-            image_blob BLOB,
             created_at TEXT DEFAULT (datetime('now')),
-            FOREIGN KEY (file_id) REFERENCES file_index(id)
+            model_version TEXT,
+            preprocess_version TEXT,
+            FOREIGN KEY (image_id) REFERENCES pdf_images(id)
         );
         """
     )
