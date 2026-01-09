@@ -24,7 +24,15 @@ init_db()
 def get_db():
     db = getattr(g, "_database", None)
     if db is None:
-        print(f"[DB] USING: {DB_PATH.resolve()}")
+        # Windows'ta Path.resolve()/absolute() bazı patolojik path'lerde Errno 22 verebilir.
+        # Bu yüzden burada sadece ham string basıyoruz.
+        try:
+            print(f"[DB] USING (raw): {str(DB_PATH)}")
+            print(f"[DB] USING (repr): {repr(str(DB_PATH))}")
+        except Exception:
+            # Print bile istemeden patlarsa, yine de uygulama DB'ye bağlanmayı denesin.
+            pass
+
         db = g._database = sqlite3.connect(str(DB_PATH), check_same_thread=False)
         db.row_factory = sqlite3.Row
         db.execute("PRAGMA foreign_keys=ON;")
@@ -165,8 +173,9 @@ def format_visual_columns(table_name, columns, rows):
             row[target_index] = img_html
 
         # Color palette
-        if colors_index != -1 and table_name == "image_features":
-            row[colors_index] = "Color palette here"
+            # Color palette
+            if colors_index != -1 and table_name == "image_features":
+                row[colors_index] = "Color palette here"
 
         new_rows.append(row)
     return new_rows
@@ -201,7 +210,6 @@ def static_images(filename):
     Thumbnail görsellerini temp/images klasöründen sunar.
     pathlib yerine os.path kullanıldı.
     """
-    # Görüntüleri temp/images klasöründen güvenli bir şekilde sunar.
     return send_from_directory(str(THUMBNAIL_DIR), filename)
 
 
@@ -230,10 +238,9 @@ def pdf_detail(file_id):
     if filter_type == 'chessboard':
         sql_condition = "AND T2.is_chessboard = 1"
     elif filter_type == 'non_chessboard':
-        sql_condition = "AND (T2.is_chessboard = 0 OR T2.is_chessboard IS NULL)"  # Tahta olmadığı kesinleşenler veya henüz işlenmemiş olanlar
+        sql_condition = "AND (T2.is_chessboard = 0 OR T2.is_chessboard IS NULL)"
 
-    # 3. Görsel Bilgilerini Çek (image_features tablosundan bayraklar dahil)
-    # T1: pdf_images, T2: image_features
+    # 3. Görsel Bilgilerini Çek
     query = f"""
             SELECT 
                 T1.page_no, T1.image_index, T2.is_chessboard, T2.chessboard_score
@@ -246,12 +253,14 @@ def pdf_detail(file_id):
 
     # 4. Verileri Arayüz İçin Hazırla
     processed_images = []
-    # os.path.splitext ile dosya adından uzantıyı çıkar
     pdf_stem = os.path.splitext(pdf_name)[0]
 
     for row in images:
-        # Thumbnail dosya adı formatı: [PDF_adi]_p[sayfa_no]_[gorsel_index].png (pdf_extract.py'den geliyor)
-        thumb_name = f"{pdf_stem}_p{row['page_no']}_{row['image_index']}.png"
+        image_index_db = row['image_index']
+        img_index = image_index_db // 1000
+        rect_i = image_index_db % 1000
+
+        thumb_name = f"{pdf_stem}_p{row['page_no']}_{img_index}_{rect_i}.png"
 
         processed_images.append({
             'page': row['page_no'],
@@ -271,14 +280,13 @@ def pdf_detail(file_id):
 
 
 # ============================================================
-# MAIN ROUTE (GÜNCELLENDİ)
+# MAIN ROUTE
 # ============================================================
 
 @app.route('/')
 def index():
     db = get_db()
 
-    # Tüm PDF'leri çek (Detay sayfasına link vermek için)
     pdf_rows = db.execute("SELECT id, filename, doc_type FROM file_index ORDER BY filename").fetchall()
 
     tables = get_all_tables()
@@ -293,9 +301,6 @@ def index():
         "High Image Similarity Pairs (>90%)": metrics["High Image Similarity Pairs (>90%)"]
     }
 
-    # -----------------------------
-    # Chart.js için örnek veri
-    # -----------------------------
     charts_data = {
         "pdf_labels": ["PDF1", "PDF2", "PDF3", "PDF4"],
         "text_similarity": [78, 85, 92, 88],
@@ -307,13 +312,9 @@ def index():
         tables=tables,
         summary=final_summary,
         charts_data=charts_data,
-        pdfs=pdf_rows  # Yeni ekleme: Index sayfasında PDF'leri listeleyebilmek için
+        pdfs=pdf_rows
     )
 
-
-# ============================================================
-# SERVER START
-# ============================================================
 
 if __name__ == '__main__':
     app.run(debug=True)
