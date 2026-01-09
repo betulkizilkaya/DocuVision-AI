@@ -2,7 +2,6 @@
 import io
 import json
 import sqlite3
-from pathlib import Path
 from typing import Optional, List, Tuple
 
 import cv2
@@ -16,8 +15,8 @@ from app.core.paths import DB_PATH, ROOT_DIR
 # ---------------------------
 # MODEL PATHS
 # ---------------------------
-MODEL_PATH = ROOT_DIR / "model" / "models" / "chess_model_v3.keras"
-CLASS_INDICES_PATH = ROOT_DIR / "model" / "models" / "class_indices.json"
+MODEL_PATH = ROOT_DIR / "app" / "model" / "models" / "chess_model_v3.keras"
+CLASS_INDICES_PATH = ROOT_DIR / "app" / "model" / "models" / "class_indices.json"
 
 # ---------------------------
 # SETTINGS
@@ -25,15 +24,15 @@ CLASS_INDICES_PATH = ROOT_DIR / "model" / "models" / "class_indices.json"
 IMG_SIZE = (64, 64)
 UPSCALE = 2.5
 CELL_MARGIN_RATIO = 0.08
-USE_EQUALIZE = True
+USE_EQUALIZE = True  # (Bu flag artık preprocess'te kullanılmıyor; istersen kaldırabilirsin)
+
+# ✅ İSTEDİĞİN FİLTRE: SADECE BU file_id'ler
+FILTER_FILE_IDS = (2, 5, 11, 13, 14)
 
 # Performans / çalışma kontrolü
 BATCH_COMMIT = 50
 LIMIT: Optional[int] = None          # None=hepsi, denemek için 200 gibi
 MIN_CHESSBOARD_SCORE = 0.0           # istersen 0.35 gibi yap
-
-# Chessboard detector zaten bayrakladıysa tekrar threshold kullanmana gerek yok,
-# ama score ile daha “temiz” set seçmek istersen MIN_CHESSBOARD_SCORE işe yarar.
 
 CLASS_TO_FEN = {
     "White_Pawn": "P", "White_Rook": "R", "White_Knight": "N", "White_Bishop": "B",
@@ -57,7 +56,7 @@ def create_connection() -> sqlite3.Connection:
 
 def ensure_chess_fen_table(conn: sqlite3.Connection) -> None:
     """
-    chess_fen artık image_id bazlı ve blob'suz.
+    chess_fen image_id bazlı ve blob'suz.
     """
     conn.execute(
         """
@@ -74,9 +73,14 @@ def ensure_chess_fen_table(conn: sqlite3.Connection) -> None:
 
 def fetch_chessboard_images(conn: sqlite3.Connection) -> List[Tuple[int, bytes, float]]:
     """
-    is_chessboard=1 olan görselleri ve score'u getirir.
+    is_chessboard=1 olan görselleri, score + file_id filtresi ile getirir.
     """
-    q = """
+    if not FILTER_FILE_IDS:
+        raise ValueError("FILTER_FILE_IDS boş olamaz.")
+
+    placeholders = ",".join(["?"] * len(FILTER_FILE_IDS))
+
+    q = f"""
     SELECT
       pi.id AS image_id,
       pi.blob AS blob,
@@ -85,9 +89,12 @@ def fetch_chessboard_images(conn: sqlite3.Connection) -> List[Tuple[int, bytes, 
     JOIN image_features f ON f.image_id = pi.id
     WHERE f.is_chessboard = 1
       AND COALESCE(f.chessboard_score, 0.0) >= ?
+      AND pi.file_id IN ({placeholders})
     ORDER BY chessboard_score DESC, pi.file_id, pi.page_no, pi.image_index
     """
-    params = [float(MIN_CHESSBOARD_SCORE)]
+
+    params = [float(MIN_CHESSBOARD_SCORE), *FILTER_FILE_IDS]
+
     if LIMIT is not None:
         q += " LIMIT ?"
         params.append(int(LIMIT))
@@ -95,7 +102,11 @@ def fetch_chessboard_images(conn: sqlite3.Connection) -> List[Tuple[int, bytes, 
     cur = conn.cursor()
     cur.execute(q, params)
     rows = cur.fetchall()
-    return [(int(r["image_id"]), bytes(r["blob"]), float(r["chessboard_score"])) for r in rows]
+
+    return [
+        (int(r["image_id"]), bytes(r["blob"]), float(r["chessboard_score"]))
+        for r in rows
+    ]
 
 
 def fen_exists(conn: sqlite3.Connection, image_id: int) -> bool:
@@ -117,16 +128,15 @@ def insert_fen(conn: sqlite3.Connection, image_id: int, fen_board: str) -> bool:
 # ---------------------------
 def blob_to_bgr_standardized(blob: bytes) -> np.ndarray:
     """
-    DB blob'unu "temp'e yazıp tekrar okumaya" benzer şekilde standardize eder:
+    DB blob'unu standardize eder:
     - PIL ile aç
-    - RGB'ye çevir (alpha/ICC vs normalize)
+    - RGB'ye çevir
     - PNG olarak yeniden encode et
     - OpenCV imdecode ile BGR al
     """
     img = Image.open(io.BytesIO(blob))
     img.load()
 
-    # Mode normalize
     if img.mode != "RGB":
         img = img.convert("RGB")
 
@@ -141,13 +151,22 @@ def blob_to_bgr_standardized(blob: bytes) -> np.ndarray:
 
 
 def preprocess_cell(cell_bgr: np.ndarray) -> np.ndarray:
+    """
+    Eğitim pipeline'ına uyumlu preprocess:
+    - grayscale
+    - CLAHE ile kontrast stabilize
+    - resize (küçültmede INTER_AREA)
+    - normalize 0..1
+    """
     gray = cv2.cvtColor(cell_bgr, cv2.COLOR_BGR2GRAY)
-    if USE_EQUALIZE:
-        gray = cv2.equalizeHist(gray)
+
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    gray = clahe.apply(gray)
 
     gray = cv2.resize(gray, IMG_SIZE, interpolation=cv2.INTER_AREA)
-    gray = gray.astype(np.float32) / 255.0
-    return np.expand_dims(gray, axis=(0, -1))  # (1, H, W, 1)
+
+    x = gray.astype(np.float32) / 255.0
+    return np.expand_dims(x, axis=(0, -1))  # (1, 64, 64, 1)
 
 
 def board_blob_to_fen_board(blob: bytes, model, idx_to_class: dict) -> str:
@@ -221,7 +240,10 @@ def main() -> None:
         ensure_chess_fen_table(conn)
 
         rows = fetch_chessboard_images(conn)
-        print(f"[INFO] chessboard=1: {len(rows)} görsel bulundu (MIN_SCORE={MIN_CHESSBOARD_SCORE}).")
+        print(
+            f"[INFO] file_id IN {FILTER_FILE_IDS} & chessboard=1: {len(rows)} görsel bulundu "
+            f"(MIN_SCORE={MIN_CHESSBOARD_SCORE})."
+        )
 
         inserted, skipped, failed = 0, 0, 0
         ops = 0

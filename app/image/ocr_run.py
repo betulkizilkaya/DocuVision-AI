@@ -27,7 +27,9 @@ def create_connection() -> sqlite3.Connection:
 
 def get_pending_images(conn: sqlite3.Connection) -> List[tuple[int, bytes]]:
     """
-    Daha önce ocr_extracts'e hiç yazılmamış (image_id yok) görselleri getir.
+    Daha önce ocr_extracts'e hiç yazılmamış ve satranç olmayan görselleri getir.
+    Satranç olmayan = image_features.is_chessboard = 0
+    (image_features kaydı yoksa da satranç değil sayılır)
     """
     cur = conn.cursor()
     cur.execute(
@@ -35,12 +37,15 @@ def get_pending_images(conn: sqlite3.Connection) -> List[tuple[int, bytes]]:
         SELECT p.id AS image_id, p.blob AS blob
         FROM pdf_images p
         LEFT JOIN ocr_extracts o ON p.id = o.image_id
+        LEFT JOIN image_features f ON f.image_id = p.id
         WHERE o.image_id IS NULL
+          AND COALESCE(f.is_chessboard, 0) = 0
         ORDER BY p.file_id, p.page_no, p.image_index
         """
     )
     rows = cur.fetchall()
     return [(int(r["image_id"]), bytes(r["blob"])) for r in rows]
+
 
 
 def save_result(conn: sqlite3.Connection, image_id: int, text: Optional[str]) -> None:
