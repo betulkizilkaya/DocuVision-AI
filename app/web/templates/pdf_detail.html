@@ -16,6 +16,7 @@
             width: 180px;
             text-align: center;
             box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+            border-radius: 8px;
         }
         .is-chessboard {
             background-color: #d4edda; /* Yeşilimsi ton */
@@ -26,6 +27,40 @@
             max-width: 100%;
             height: auto;
             object-fit: contain;
+            border-radius: 6px;
+        }
+
+        /* FEN UI */
+        .fen-box {
+            margin-top: 8px;
+            padding: 6px;
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px dashed rgba(0,0,0,0.2);
+            border-radius: 6px;
+            text-align: left;
+            font-size: 12px;
+            color: #1f2d1f;
+        }
+        .fen-code {
+            display: block;
+            margin-top: 4px;
+            padding: 6px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            word-break: break-all;
+            white-space: normal;
+        }
+        .fen-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+            align-items: center;
+        }
+        .fen-muted {
+            color: #6c757d;
+            font-size: 12px;
         }
     </style>
 </head>
@@ -66,6 +101,7 @@
             {% for image in images %}
             <div class="image-card {% if image.is_chessboard == 1 %} is-chessboard {% endif %}">
                 <img src="{{ image.thumbnail_url }}" alt="Sayfa {{ image.page }}">
+
                 <p class="mt-2">
                     <strong>Sayfa {{ image.page }}</strong>
                     <br>
@@ -76,6 +112,39 @@
                         <span style="color: red;">❌ Diğer (Skor: {{ image.score }})</span>
                     {% endif %}
                 </p>
+
+                {# =========================
+                   FEN DISPLAY (ONLY FOR SELECTED PDFs)
+                   Backend'den fen_enabled True gelirse gösterilir.
+                   ========================= #}
+                {% if fen_enabled and image.is_chessboard == 1 %}
+                <div class="fen-box">
+                    <div><strong>FEN</strong></div>
+
+                    {% if image.fen %}
+                        <code class="fen-code">{{ image.fen }}</code>
+
+                        <div class="fen-actions">
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-secondary"
+                                data-fen="{{ image.fen|e }}"
+                                onclick="copyFen(this)"
+                                title="FEN metnini panoya kopyala">
+                                Kopyala
+                            </button>
+
+                            {% if image.fen_created_at %}
+                                <span class="fen-muted">{{ image.fen_created_at }}</span>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        {# İstersen bu satırı tamamen kaldırabilirsin.
+                           fen_enabled=True ama ilgili görsele fen yoksa "Henüz üretilmedi" der. #}
+                        <span class="fen-muted">Henüz üretilmedi</span>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
@@ -97,6 +166,30 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    {# =========================
+       COPY FEN (ONLY IF ENABLED)
+       ========================= #}
+    {% if fen_enabled %}
+    <script>
+        async function copyFen(btn) {
+            try {
+                const fen = btn.getAttribute('data-fen') || '';
+                await navigator.clipboard.writeText(fen);
+
+                const original = btn.textContent;
+                btn.textContent = "Kopyalandı";
+                btn.disabled = true;
+                setTimeout(() => {
+                    btn.textContent = original;
+                    btn.disabled = false;
+                }, 900);
+            } catch (e) {
+                alert("Kopyalama başarısız. Tarayıcı izinlerini kontrol et.");
+            }
+        }
+    </script>
+    {% endif %}
 
     {# =========================
        CLIENT-SIDE PAGINATION JS

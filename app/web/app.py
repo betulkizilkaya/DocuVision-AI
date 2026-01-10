@@ -17,6 +17,9 @@ from app.core.db import init_db
 THUMBNAIL_DIR = ROOT_DIR / "temp" / "images"
 THUMBNAIL_DIR.mkdir(parents=True, exist_ok=True)
 
+# ✅ Sadece bu PDF'lerde FEN gösterilecek / join yapılacak
+FEN_ENABLED_FILE_IDS = {2, 5, 11, 13, 14}
+
 app = Flask(__name__)
 
 # DB şemasını garanti et
@@ -26,8 +29,6 @@ init_db()
 def get_db():
     db = getattr(g, "_database", None)
     if db is None:
-        # Windows'ta Path.resolve()/absolute() bazı durumlarda Errno 22 verebilir.
-        # Bu yüzden burada ham string basıyoruz.
         try:
             print(f"[DB] USING (raw): {str(DB_PATH)}")
             print(f"[DB] USING (repr): {repr(str(DB_PATH))}")
@@ -48,7 +49,7 @@ def close_connection(exception=None):
 
 
 # ============================================================
-# PAGINATION HELPER (opsiyonel, şimdilik routes yok)
+# PAGINATION HELPER (opsiyonel)
 # ============================================================
 
 def paginate(total_count: int, page: int, per_page: int):
@@ -94,7 +95,6 @@ def get_summary_metrics():
         avg_img = db.execute("SELECT AVG(ssim) FROM image_similarity").fetchone()[0]
         metrics["Average Image Similarity (Avg Score)"] = f"{avg_img:.3f}" if avg_img else "N/A"
     except:
-        # eski şema avg_similarity kullanıyorsa fallback
         try:
             avg_img = db.execute("SELECT AVG(avg_similarity) FROM image_similarity").fetchone()[0]
             metrics["Average Image Similarity (Avg Score)"] = f"{avg_img:.3f}" if avg_img else "N/A"
@@ -111,13 +111,11 @@ def get_summary_metrics():
         pass
 
     try:
-        # yeni şema label/ssim olabilir; varsa ssim ile ölç
         high_img = db.execute(
             "SELECT COUNT(id) FROM image_similarity WHERE CAST(ssim AS REAL) > 0.90"
         ).fetchone()[0]
         metrics["High Image Similarity Pairs (>90%)"] = high_img
     except:
-        # eski şema avg_similarity fallback
         try:
             high_img = db.execute(
                 "SELECT COUNT(id) FROM image_similarity WHERE CAST(avg_similarity AS REAL) > 0.90"
@@ -211,10 +209,13 @@ def get_all_tables():
         "text_similarity",
 
         # image & binary
-        "image_features", "image_similarity", "binary_similarity",
+        "image_features", "image_similarity" ,
 
         # NER
         "entities_raw", "persons", "person_mentions",
+
+        # fen table (opsiyonel)
+        "chess_fen",
     ]
 
     data = {}
@@ -248,6 +249,8 @@ def pdf_detail(file_id):
         return "404 - PDF Bulunamadı", 404
     pdf_name = pdf_row['filename']
 
+    fen_enabled = file_id in FEN_ENABLED_FILE_IDS
+
     filter_type = request.args.get('filter', 'all')
     sql_condition = ""
     if filter_type == 'chessboard':
@@ -255,14 +258,34 @@ def pdf_detail(file_id):
     elif filter_type == 'non_chessboard':
         sql_condition = "AND (T2.is_chessboard = 0 OR T2.is_chessboard IS NULL)"
 
-    query = f"""
-        SELECT
-            T1.page_no, T1.image_index, T2.is_chessboard, T2.chessboard_score
-        FROM pdf_images T1
-        INNER JOIN image_features T2 ON T1.id = T2.image_id
-        WHERE T1.file_id = ? {sql_condition}
-        ORDER BY T1.page_no, T1.image_index
-    """
+    if fen_enabled:
+        query = f"""
+            SELECT
+                T1.page_no,
+                T1.image_index,
+                T2.is_chessboard,
+                T2.chessboard_score,
+                CF.fen_format AS fen,
+                CF.created_at AS fen_created_at
+            FROM pdf_images T1
+            INNER JOIN image_features T2 ON T1.id = T2.image_id
+            LEFT JOIN chess_fen CF ON CF.image_id = T1.id
+            WHERE T1.file_id = ? {sql_condition}
+            ORDER BY T1.page_no, T1.image_index
+        """
+    else:
+        query = f"""
+            SELECT
+                T1.page_no,
+                T1.image_index,
+                T2.is_chessboard,
+                T2.chessboard_score
+            FROM pdf_images T1
+            INNER JOIN image_features T2 ON T1.id = T2.image_id
+            WHERE T1.file_id = ? {sql_condition}
+            ORDER BY T1.page_no, T1.image_index
+        """
+
     images = db.execute(query, (file_id,)).fetchall()
 
     processed_images = []
@@ -275,20 +298,27 @@ def pdf_detail(file_id):
 
         thumb_name = f"{pdf_stem}_p{row['page_no']}_{img_index}_{rect_i}.png"
 
-        processed_images.append({
+        item = {
             'page': row['page_no'],
             'index': row['image_index'],
             'is_chessboard': row['is_chessboard'] if row['is_chessboard'] is not None else 0,
             'score': f"{row['chessboard_score']:.2f}" if row['chessboard_score'] is not None else "0.00",
-            'thumbnail_url': url_for('static_images', filename=thumb_name)
-        })
+            'thumbnail_url': url_for('static_images', filename=thumb_name),
+        }
+
+        if fen_enabled:
+            item['fen'] = row['fen']
+            item['fen_created_at'] = row['fen_created_at']
+
+        processed_images.append(item)
 
     return render_template(
         'pdf_detail.html',
         pdf_name=pdf_name,
         images=processed_images,
         file_id=file_id,
-        current_filter=filter_type
+        current_filter=filter_type,
+        fen_enabled=fen_enabled,
     )
 
 

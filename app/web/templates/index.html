@@ -103,7 +103,7 @@
                     <div class="collapse" id="collapseImage" data-bs-parent="#menuAccordion">
                         <ul class="nav flex-column ms-3">
                             {% for table_name, data in tables.items() %}
-                                {% if table_name in ["image_features", "image_similarity", "binary_similarity"] %}
+                                {% if table_name in ["image_features", "image_similarity"] %}
                                     <li class="nav-item">
                                         <a class="list-group-item list-group-item-action p-3"
                                            id="menu-{{ table_name }}-image"

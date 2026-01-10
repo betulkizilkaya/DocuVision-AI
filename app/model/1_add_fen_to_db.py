@@ -48,7 +48,13 @@ CLASS_TO_FEN = {
 # ---------------------------
 def create_connection() -> sqlite3.Connection:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH), detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
+    conn = sqlite3.connect(
+        str(DB_PATH),
+        detect_types=sqlite3.PARSE_DECLTYPES,
+        check_same_thread=False,
+        timeout=30
+    )
+
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON;")
     return conn
@@ -56,8 +62,13 @@ def create_connection() -> sqlite3.Connection:
 
 def ensure_chess_fen_table(conn: sqlite3.Connection) -> None:
     """
-    chess_fen image_id bazlı ve blob'suz.
+    chess_fen image_id bazlı olmalı.
+    Daha önce yanlış şemayla (file_id vs.) oluşmuş chess_fen varsa kaldırıp doğru şemayla kurar.
     """
+    # Eski/yanlış chess_fen varsa temizle
+    conn.execute("DROP TABLE IF EXISTS chess_fen;")
+
+    # Doğru şema: image_id bazlı
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS chess_fen(
@@ -69,6 +80,7 @@ def ensure_chess_fen_table(conn: sqlite3.Connection) -> None:
         """
     )
     conn.commit()
+
 
 
 def fetch_chessboard_images(conn: sqlite3.Connection) -> List[Tuple[int, bytes, float]]:
