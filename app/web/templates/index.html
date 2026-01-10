@@ -16,6 +16,10 @@
         .filter-row input { width: 100%; box-sizing: border-box; }
         .metric-card { background-color: #fff; border: 1px solid #ddd; }
         .sidebar-heading { padding: 1rem; font-weight: 600; }
+
+        /* Person Explorer: küçük UX dokunuşları */
+        .row-selectable tbody tr { cursor: pointer; }
+        .row-selectable tbody tr.table-active { font-weight: 600; }
     </style>
 </head>
 
@@ -116,7 +120,7 @@
                     </div>
                 </li>
 
-                <!-- NEW: Document Explorer -->
+                <!-- Document Explorer -->
                 <li class="nav-item">
                     <a class="nav-link sidebar-tree-header" data-bs-toggle="collapse" href="#collapseDocs" role="button" aria-expanded="false">
                         <i class="bi bi-folder2-open me-2"></i> Document Explorer
@@ -131,6 +135,38 @@
                                    role="tab"
                                    aria-controls="list-docs">
                                     Processed Documents
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+
+                <!-- NER (2 TAB: Entities Raw + Person Explorer) -->
+                <li class="nav-item">
+                    <a class="nav-link sidebar-tree-header" data-bs-toggle="collapse" href="#collapseNER" role="button" aria-expanded="false">
+                        <i class="bi bi-person-lines-fill me-2"></i> NER & Persons
+                    </a>
+                    <div class="collapse" id="collapseNER" data-bs-parent="#menuAccordion">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="list-group-item list-group-item-action p-3"
+                                   id="menu-entities-raw"
+                                   data-bs-toggle="list"
+                                   href="#list-entities-raw"
+                                   role="tab"
+                                   aria-controls="list-entities-raw">
+                                    Entities Raw
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="list-group-item list-group-item-action p-3"
+                                   id="menu-person-explorer"
+                                   data-bs-toggle="list"
+                                   href="#list-person-explorer"
+                                   role="tab"
+                                   aria-controls="list-person-explorer">
+                                    Person Explorer
                                 </a>
                             </li>
                         </ul>
@@ -228,7 +264,7 @@
             <!-- TAB CONTENT -->
             <div class="tab-content" id="nav-tabContent">
 
-                <!-- NEW: Processed Documents tab-pane -->
+                <!-- Processed Documents tab-pane -->
                 <div class="tab-pane fade" id="list-docs" role="tabpanel" aria-labelledby="menu-docs">
                     <h3 class="mb-3">📄 Processed Documents & Visual Analysis</h3>
                     <p class="text-muted">
@@ -263,27 +299,25 @@
                     </div>
                 </div>
 
-                <!-- Existing DB tables -->
-                {% for table_name, data in tables.items() %}
-                    <div class="tab-pane fade {% if table_name == 'text_lines' %}show active{% endif %}"
-                         id="list-{{ table_name }}"
-                         role="tabpanel"
-                         aria-labelledby="menu-{{ table_name }}">
+                <!-- Entities Raw -->
+                <div class="tab-pane fade" id="list-entities-raw" role="tabpanel" aria-labelledby="menu-entities-raw">
+                    <h3 class="mb-3">🏷️ Entities Raw</h3>
+                    <p class="text-muted">
+                        Raw entities extracted from <code>text_lines</code> (all entity types). Useful for debugging and coverage checks.
+                    </p>
 
-                        <h3 class="mb-3">{{ table_name | replace('_', ' ') | title }} Table</h3>
-                        <p class="text-muted">Filtering, search, and sorting features have been added to this area.</p>
-
+                    {% if tables.get('entities_raw') and tables['entities_raw']['rows'] %}
                         <div class="table-container">
-                            <table id="{{ table_name }}" class="table table-striped table-bordered table-sm datatable">
+                            <table id="entities_raw" class="table table-striped table-bordered table-sm datatable">
                                 <thead class="table-dark">
                                     <tr>
-                                        {% for col in data.columns %}
+                                        {% for col in tables['entities_raw']['columns'] %}
                                             <th>{{ col | title }}</th>
                                         {% endfor %}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for row in data.rows %}
+                                    {% for row in tables['entities_raw']['rows'] %}
                                         <tr>
                                             {% for item in row %}
                                                 <td>{{ item | safe }}</td>
@@ -293,7 +327,125 @@
                                 </tbody>
                             </table>
                         </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            entities_raw tablosu boş ya da <code>tables</code> içine eklenmemiş. (NER çalıştıktan sonra dolmalı)
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Person Explorer (2 tablo tek sayfa) -->
+                <div class="tab-pane fade" id="list-person-explorer" role="tabpanel" aria-labelledby="menu-person-explorer">
+                    <h3 class="mb-3">🧭 Person Explorer</h3>
+                    <p class="text-muted">
+                        Select a person from the summary table to filter raw mentions below (traceability to source lines).
+                    </p>
+
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <div class="small text-muted" id="personExplorerState">No person selected.</div>
+                        <button class="btn btn-sm btn-outline-secondary" id="clearPersonFilter" type="button">
+                            Clear Filter
+                        </button>
                     </div>
+
+                    <!-- Persons (summary) -->
+                    <div class="card shadow-sm p-3 mb-4">
+                        <h5 class="mb-3">👤 Persons (Summary)</h5>
+
+                        {% if tables.get('persons') and tables['persons']['rows'] %}
+                            <div class="table-container">
+                                <table id="persons" class="table table-striped table-bordered table-sm datatable row-selectable">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            {% for col in tables['persons']['columns'] %}
+                                                <th>{{ col | title }}</th>
+                                            {% endfor %}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for row in tables['persons']['rows'] %}
+                                            <tr>
+                                                {% for item in row %}
+                                                    <td>{{ item | safe }}</td>
+                                                {% endfor %}
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                persons tablosu boş ya da <code>tables</code> içine eklenmemiş. (NER çalıştıktan sonra dolmalı)
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Mentions (raw) -->
+                    <div class="card shadow-sm p-3">
+                        <h5 class="mb-3">🧾 Person Mentions (Raw)</h5>
+
+                        {% if tables.get('person_mentions') and tables['person_mentions']['rows'] %}
+                            <div class="table-container">
+                                <table id="person_mentions" class="table table-striped table-bordered table-sm datatable">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            {% for col in tables['person_mentions']['columns'] %}
+                                                <th>{{ col | title }}</th>
+                                            {% endfor %}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for row in tables['person_mentions']['rows'] %}
+                                            <tr>
+                                                {% for item in row %}
+                                                    <td>{{ item | safe }}</td>
+                                                {% endfor %}
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                person_mentions tablosu boş ya da <code>tables</code> içine eklenmemiş. (NER çalıştıktan sonra dolmalı)
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Existing DB tables (skip NER tables to avoid duplication) -->
+                {% for table_name, data in tables.items() %}
+                    {% if table_name not in ['persons', 'person_mentions', 'entities_raw'] %}
+                        <div class="tab-pane fade {% if table_name == 'text_lines' %}show active{% endif %}"
+                             id="list-{{ table_name }}"
+                             role="tabpanel"
+                             aria-labelledby="menu-{{ table_name }}">
+
+                            <h3 class="mb-3">{{ table_name | replace('_', ' ') | title }} Table</h3>
+                            <p class="text-muted">Filtering, search, and sorting features have been added to this area.</p>
+
+                            <div class="table-container">
+                                <table id="{{ table_name }}" class="table table-striped table-bordered table-sm datatable">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            {% for col in data.columns %}
+                                                <th>{{ col | title }}</th>
+                                            {% endfor %}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for row in data.rows %}
+                                            <tr>
+                                                {% for item in row %}
+                                                    <td>{{ item | safe }}</td>
+                                                {% endfor %}
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    {% endif %}
                 {% endfor %}
 
             </div>
@@ -486,7 +638,7 @@ $(document).ready(function () {
     });
 
     /* ============================================================
-       IMAGE MODAL (CURRENT IMPLEMENTATION)
+       IMAGE MODAL
     ==============================================================*/
     var imageModal = document.getElementById('imageModal');
     imageModal.addEventListener('show.bs.modal', function(event){
@@ -541,6 +693,61 @@ $(document).ready(function () {
     });
 
     /* ============================================================
+       PERSON EXPLORER: CLICK PERSON -> FILTER MENTIONS
+    ==============================================================*/
+    function getDataTableSafe(id) {
+        if (!$('#' + id).length) return null;
+        if (!$.fn.DataTable.isDataTable('#' + id)) return null;
+        return $('#' + id).DataTable();
+    }
+
+    function findColumnIndexByName(dt, colNameLower) {
+        if (!dt) return -1;
+        const headers = dt.columns().header().toArray().map(h => (h.innerText || "").trim().toLowerCase());
+        return headers.indexOf(colNameLower);
+    }
+
+    const personsDt = getDataTableSafe('persons');
+    const mentionsDt = getDataTableSafe('person_mentions');
+
+    const stateEl = $('#personExplorerState');
+    const clearBtn = $('#clearPersonFilter');
+
+    if (personsDt && mentionsDt) {
+        const personIdColInPersons = findColumnIndexByName(personsDt, 'id');
+        const personIdColInMentions = findColumnIndexByName(mentionsDt, 'person_id');
+
+        $('#persons tbody').on('click', 'tr', function () {
+            $('#persons tbody tr').removeClass('table-active');
+            $(this).addClass('table-active');
+
+            const rowData = personsDt.row(this).data();
+            if (!rowData) return;
+
+            const personId = rowData[personIdColInPersons];
+            const normName = rowData[findColumnIndexByName(personsDt, 'norm_name')] || '';
+
+            if (personIdColInMentions !== -1) {
+                mentionsDt.column(personIdColInMentions).search('^' + personId + '$', true, false).draw();
+                stateEl.text('Selected: ' + normName + ' (person_id=' + personId + ')');
+            }
+        });
+
+        clearBtn.on('click', function () {
+            $('#persons tbody tr').removeClass('table-active');
+            const personIdColInMentions = findColumnIndexByName(mentionsDt, 'person_id');
+            if (personIdColInMentions !== -1) {
+                mentionsDt.column(personIdColInMentions).search('', true, false).draw();
+            }
+            stateEl.text('No person selected.');
+        });
+    } else {
+        clearBtn.on('click', function () {
+            stateEl.text('No person selected.');
+        });
+    }
+
+    /* ============================================================
        SIDEBAR SWITCHING
     ==============================================================*/
     $('a.list-group-item[data-bs-toggle="list"]').on('click', function(e){
@@ -556,21 +763,12 @@ $(document).ready(function () {
         $('.tab-content .tab-pane').removeClass('show active');
         $(targetTab).addClass('show active');
 
-        const tableId = targetTab.replace('#list-','');
-        if ($('#'+tableId).length && $('#'+tableId).hasClass('datatable')) {
-            if (!$.fn.DataTable.isDataTable('#'+tableId)) {
-                const opts = (tableId === 'text_similarity') ? textSimOpts : baseOpts;
-                $('#'+tableId).DataTable(opts);
+        // If the shown pane includes datatables, adjust
+        $('.datatable').each(function () {
+            if ($.fn.DataTable.isDataTable('#' + this.id)) {
+                $(this).DataTable().columns.adjust().draw();
             }
-            $('#'+tableId).DataTable().columns.adjust().draw();
-        } else {
-            // Some tabs may not be direct DB table IDs; adjust any datatables in view
-            $('.datatable').each(function () {
-                if ($.fn.DataTable.isDataTable('#' + this.id)) {
-                    $(this).DataTable().columns.adjust().draw();
-                }
-            });
-        }
+        });
     });
 
     $('.sidebar-tree-header').on('click', function(){

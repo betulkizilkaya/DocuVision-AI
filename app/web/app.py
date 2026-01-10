@@ -4,10 +4,12 @@ import os
 import base64
 import sys
 from pathlib import Path
+from math import ceil
 
 # Proje kökünü sys.path'e ekle (script olarak çalıştırmak için)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT))
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.core.paths import DB_PATH, ROOT_DIR
 from app.core.db import init_db
@@ -17,20 +19,19 @@ THUMBNAIL_DIR.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__)
 
-# DB şemasını garanti et (file_index dahil)
+# DB şemasını garanti et
 init_db()
 
 
 def get_db():
     db = getattr(g, "_database", None)
     if db is None:
-        # Windows'ta Path.resolve()/absolute() bazı patolojik path'lerde Errno 22 verebilir.
-        # Bu yüzden burada sadece ham string basıyoruz.
+        # Windows'ta Path.resolve()/absolute() bazı durumlarda Errno 22 verebilir.
+        # Bu yüzden burada ham string basıyoruz.
         try:
             print(f"[DB] USING (raw): {str(DB_PATH)}")
             print(f"[DB] USING (repr): {repr(str(DB_PATH))}")
         except Exception:
-            # Print bile istemeden patlarsa, yine de uygulama DB'ye bağlanmayı denesin.
             pass
 
         db = g._database = sqlite3.connect(str(DB_PATH), check_same_thread=False)
@@ -44,6 +45,17 @@ def close_connection(exception=None):
     db = getattr(g, "_database", None)
     if db is not None:
         db.close()
+
+
+# ============================================================
+# PAGINATION HELPER (opsiyonel, şimdilik routes yok)
+# ============================================================
+
+def paginate(total_count: int, page: int, per_page: int):
+    total_pages = max(1, ceil(total_count / per_page)) if per_page > 0 else 1
+    page = max(1, min(page, total_pages))
+    offset = (page - 1) * per_page
+    return total_pages, offset, page
 
 
 # ============================================================
@@ -62,33 +74,33 @@ def get_summary_metrics():
         "High Image Similarity Pairs (>90%)": "N/A"
     }
 
-    # Total PDFs
     try:
         metrics["Total PDF Count"] = db.execute("SELECT COUNT(id) FROM file_index").fetchone()[0]
     except:
         pass
 
-    # Total Images
     try:
         metrics["Total Images"] = db.execute("SELECT COUNT(id) FROM pdf_images").fetchone()[0]
     except:
         pass
 
-    # Avg text sim
     try:
         avg_text = db.execute("SELECT AVG(avg_score) FROM text_similarity").fetchone()[0]
         metrics["Average Text Similarity (Avg Score)"] = f"{avg_text:.3f}" if avg_text else "N/A"
     except:
         pass
 
-    # Avg image sim
     try:
-        avg_img = db.execute("SELECT AVG(avg_similarity) FROM image_similarity").fetchone()[0]
+        avg_img = db.execute("SELECT AVG(ssim) FROM image_similarity").fetchone()[0]
         metrics["Average Image Similarity (Avg Score)"] = f"{avg_img:.3f}" if avg_img else "N/A"
     except:
-        pass
+        # eski şema avg_similarity kullanıyorsa fallback
+        try:
+            avg_img = db.execute("SELECT AVG(avg_similarity) FROM image_similarity").fetchone()[0]
+            metrics["Average Image Similarity (Avg Score)"] = f"{avg_img:.3f}" if avg_img else "N/A"
+        except:
+            pass
 
-    # High text sim > 0.90
     try:
         high_text = db.execute(
             "SELECT COUNT(id) FROM text_similarity WHERE CAST(avg_score AS REAL) > 0.90"
@@ -98,14 +110,21 @@ def get_summary_metrics():
     except:
         pass
 
-    # High image sim > 0.90
     try:
+        # yeni şema label/ssim olabilir; varsa ssim ile ölç
         high_img = db.execute(
-            "SELECT COUNT(id) FROM image_similarity WHERE CAST(avg_similarity AS REAL) > 0.90"
+            "SELECT COUNT(id) FROM image_similarity WHERE CAST(ssim AS REAL) > 0.90"
         ).fetchone()[0]
         metrics["High Image Similarity Pairs (>90%)"] = high_img
     except:
-        pass
+        # eski şema avg_similarity fallback
+        try:
+            high_img = db.execute(
+                "SELECT COUNT(id) FROM image_similarity WHERE CAST(avg_similarity AS REAL) > 0.90"
+            ).fetchone()[0]
+            metrics["High Image Similarity Pairs (>90%)"] = high_img
+        except:
+            pass
 
     return metrics
 
@@ -117,7 +136,7 @@ def get_summary_metrics():
 def get_table_data(table_name):
     db = get_db()
     try:
-        query = f"SELECT * FROM {table_name} ORDER BY id ASC LIMIT 100"
+        query = f"SELECT * FROM {table_name} ORDER BY id ASC LIMIT 500"
         cursor = db.execute(query)
         columns = [c[0] for c in cursor.description]
         rows = cursor.fetchall()
@@ -172,10 +191,8 @@ def format_visual_columns(table_name, columns, rows):
                 """
             row[target_index] = img_html
 
-        # Color palette
-            # Color palette
-            if colors_index != -1 and table_name == "image_features":
-                row[colors_index] = "Color palette here"
+        if colors_index != -1 and table_name == "image_features":
+            row[colors_index] = row[colors_index] if row[colors_index] else ""
 
         new_rows.append(row)
     return new_rows
@@ -187,8 +204,17 @@ def format_visual_columns(table_name, columns, rows):
 
 def get_all_tables():
     table_names = [
-        "file_index", "text_lines", "text_similarity",
-        "pdf_images", "image_features", "image_similarity", "binary_similarity"
+        # extraction
+        "file_index", "text_lines", "pdf_images",
+
+        # text similarity
+        "text_similarity",
+
+        # image & binary
+        "image_features", "image_similarity", "binary_similarity",
+
+        # NER
+        "entities_raw", "persons", "person_mentions",
     ]
 
     data = {}
@@ -201,57 +227,44 @@ def get_all_tables():
 
 
 # ============================================================
-# NEW ROUTE: THUMBNAIL SERVER
+# THUMBNAIL SERVER
 # ============================================================
 
 @app.route('/static/images/<filename>')
 def static_images(filename):
-    """
-    Thumbnail görsellerini temp/images klasöründen sunar.
-    pathlib yerine os.path kullanıldı.
-    """
     return send_from_directory(str(THUMBNAIL_DIR), filename)
 
 
 # ============================================================
-# NEW ROUTE: PDF DETAIL AND CHESSBOARD FILTER
+# PDF DETAIL AND CHESSBOARD FILTER
 # ============================================================
 
 @app.route('/pdf/<int:file_id>')
 def pdf_detail(file_id):
-    """
-    Belirli bir PDF'e ait görselleri ve satranç tahtası bayraklarını listeler.
-    Filtre: ?filter=chessboard veya ?filter=non_chessboard
-    """
     db = get_db()
 
-    # 1. PDF Adını Çek
     pdf_row = db.execute("SELECT filename FROM file_index WHERE id = ?", (file_id,)).fetchone()
     if pdf_row is None:
         return "404 - PDF Bulunamadı", 404
     pdf_name = pdf_row['filename']
 
-    # 2. Filtreleme Mantığı
     filter_type = request.args.get('filter', 'all')
-
     sql_condition = ""
     if filter_type == 'chessboard':
         sql_condition = "AND T2.is_chessboard = 1"
     elif filter_type == 'non_chessboard':
         sql_condition = "AND (T2.is_chessboard = 0 OR T2.is_chessboard IS NULL)"
 
-    # 3. Görsel Bilgilerini Çek
     query = f"""
-            SELECT 
-                T1.page_no, T1.image_index, T2.is_chessboard, T2.chessboard_score
-            FROM pdf_images T1
-            INNER JOIN image_features T2 ON T1.id = T2.image_id
-            WHERE T1.file_id = ? {sql_condition}
-            ORDER BY T1.page_no, T1.image_index
-            """
+        SELECT
+            T1.page_no, T1.image_index, T2.is_chessboard, T2.chessboard_score
+        FROM pdf_images T1
+        INNER JOIN image_features T2 ON T1.id = T2.image_id
+        WHERE T1.file_id = ? {sql_condition}
+        ORDER BY T1.page_no, T1.image_index
+    """
     images = db.execute(query, (file_id,)).fetchall()
 
-    # 4. Verileri Arayüz İçin Hazırla
     processed_images = []
     pdf_stem = os.path.splitext(pdf_name)[0]
 
@@ -287,7 +300,9 @@ def pdf_detail(file_id):
 def index():
     db = get_db()
 
-    pdf_rows = db.execute("SELECT id, filename, doc_type FROM file_index ORDER BY filename").fetchall()
+    pdf_rows = db.execute(
+        "SELECT id, filename, doc_type FROM file_index ORDER BY filename"
+    ).fetchall()
 
     tables = get_all_tables()
     metrics = get_summary_metrics()
