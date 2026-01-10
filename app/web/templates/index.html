@@ -288,10 +288,21 @@
                                         <td>{{ pdf.filename }}</td>
                                         <td>{{ pdf.doc_type | default('Henüz Sınıflandırılmadı') }}</td>
                                         <td>
-                                            <a href="{{ url_for('pdf_detail', file_id=pdf.id) }}" class="btn btn-sm btn-primary">
-                                                <i class="bi bi-eye"></i> Görsel Analiz (Satranç)
-                                            </a>
-                                        </td>
+  <div class="action-wrap">
+    <a href="{{ url_for('pdf_detail', file_id=pdf.id) }}"
+       class="btn btn-sm btn-nexus">
+      <i class="bi bi-eye-fill me-1"></i>
+      Görsel Analiz
+    </a>
+
+    {% if pdf.id in fen_enabled_ids %}
+      <span class="fen-pill">
+        <i class="bi bi-diagram-3 me-1"></i> FEN MEVCUT
+      </span>
+    {% endif %}
+  </div>
+</td>
+
                                     </tr>
                                 {% endfor %}
                             </tbody>

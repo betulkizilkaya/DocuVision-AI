@@ -1,6 +1,6 @@
 import sqlite3
 from app.core.paths import DB_PATH
-from app.core.ner_ops import run_ner
+from app.namedEntity.ner_ops import run_ner
 import spacy
 nlp = spacy.load("xx_ent_wiki_sm")
 doc = nlp("Magnus Carlsen dünya şampiyonudur. Garry Kasparov efsanedir.")

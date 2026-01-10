@@ -17,7 +17,7 @@ from app.core.db import init_db
 THUMBNAIL_DIR = ROOT_DIR / "temp" / "images"
 THUMBNAIL_DIR.mkdir(parents=True, exist_ok=True)
 
-# ✅ Sadece bu PDF'lerde FEN gösterilecek / join yapılacak
+# FEN sadece bu PDF'ler için gösterilecek
 FEN_ENABLED_FILE_IDS = {2, 5, 11, 13, 14}
 
 app = Flask(__name__)
@@ -48,20 +48,12 @@ def close_connection(exception=None):
         db.close()
 
 
-# ============================================================
-# PAGINATION HELPER (opsiyonel)
-# ============================================================
-
 def paginate(total_count: int, page: int, per_page: int):
     total_pages = max(1, ceil(total_count / per_page)) if per_page > 0 else 1
     page = max(1, min(page, total_pages))
     offset = (page - 1) * per_page
     return total_pages, offset, page
 
-
-# ============================================================
-# SUMMARY METRICS
-# ============================================================
 
 def get_summary_metrics():
     db = get_db()
@@ -87,17 +79,17 @@ def get_summary_metrics():
 
     try:
         avg_text = db.execute("SELECT AVG(avg_score) FROM text_similarity").fetchone()[0]
-        metrics["Average Text Similarity (Avg Score)"] = f"{avg_text:.3f}" if avg_text else "N/A"
+        metrics["Average Text Similarity (Avg Score)"] = f"{avg_text:.3f}" if avg_text is not None else "N/A"
     except:
         pass
 
     try:
         avg_img = db.execute("SELECT AVG(ssim) FROM image_similarity").fetchone()[0]
-        metrics["Average Image Similarity (Avg Score)"] = f"{avg_img:.3f}" if avg_img else "N/A"
+        metrics["Average Image Similarity (Avg Score)"] = f"{avg_img:.3f}" if avg_img is not None else "N/A"
     except:
         try:
             avg_img = db.execute("SELECT AVG(avg_similarity) FROM image_similarity").fetchone()[0]
-            metrics["Average Image Similarity (Avg Score)"] = f"{avg_img:.3f}" if avg_img else "N/A"
+            metrics["Average Image Similarity (Avg Score)"] = f"{avg_img:.3f}" if avg_img is not None else "N/A"
         except:
             pass
 
@@ -127,10 +119,6 @@ def get_summary_metrics():
     return metrics
 
 
-# ============================================================
-# GENERIC TABLE FETCHER
-# ============================================================
-
 def get_table_data(table_name):
     db = get_db()
     try:
@@ -144,10 +132,6 @@ def get_table_data(table_name):
     except Exception as e:
         return ["Error"], [[f"Could not retrieve data: {e}"]]
 
-
-# ============================================================
-# IMAGE BASE64 + COLOR FORMATTER
-# ============================================================
 
 def format_visual_columns(table_name, columns, rows):
     try:
@@ -193,29 +177,19 @@ def format_visual_columns(table_name, columns, rows):
             row[colors_index] = row[colors_index] if row[colors_index] else ""
 
         new_rows.append(row)
+
     return new_rows
 
 
-# ============================================================
-# ALL TABLES GETTER
-# ============================================================
-
 def get_all_tables():
     table_names = [
-        # extraction
         "file_index", "text_lines", "pdf_images",
-
-        # text similarity
         "text_similarity",
-
-        # image & binary
-        "image_features", "image_similarity" ,
-
-        # NER
+        "image_features", "image_similarity",
+        # "binary_similarity",
         "entities_raw", "persons", "person_mentions",
-
-        # fen table (opsiyonel)
         "chess_fen",
+        "ocr_extracts",
     ]
 
     data = {}
@@ -223,108 +197,126 @@ def get_all_tables():
         columns, rows = get_table_data(table)
         rows = format_visual_columns(table, columns, rows)
         data[table] = {"columns": columns, "rows": rows}
-
     return data
 
 
-# ============================================================
-# THUMBNAIL SERVER
-# ============================================================
-
-@app.route('/static/images/<filename>')
+# -------------------------------------------------
+# ✅ EKSİK OLAN ROUTE: static_images
+# -------------------------------------------------
+@app.route('/static/images/<path:filename>')
 def static_images(filename):
     return send_from_directory(str(THUMBNAIL_DIR), filename)
 
-
-# ============================================================
-# PDF DETAIL AND CHESSBOARD FILTER
-# ============================================================
 
 @app.route('/pdf/<int:file_id>')
 def pdf_detail(file_id):
     db = get_db()
 
-    pdf_row = db.execute("SELECT filename FROM file_index WHERE id = ?", (file_id,)).fetchone()
+    pdf_row = db.execute(
+        "SELECT filename FROM file_index WHERE id = ?",
+        (file_id,)
+    ).fetchone()
+
     if pdf_row is None:
         return "404 - PDF Bulunamadı", 404
-    pdf_name = pdf_row['filename']
+
+    pdf_name = pdf_row["filename"]
+    pdf_stem = os.path.splitext(pdf_name)[0]
+
+    filter_type = request.args.get("filter", "all")
+    sql_condition = ""
+
+    if filter_type == "chessboard":
+        sql_condition = "AND T2.is_chessboard = 1"
+    elif filter_type == "non_chessboard":
+        sql_condition = "AND (T2.is_chessboard = 0 OR T2.is_chessboard IS NULL)"
 
     fen_enabled = file_id in FEN_ENABLED_FILE_IDS
 
-    filter_type = request.args.get('filter', 'all')
-    sql_condition = ""
-    if filter_type == 'chessboard':
-        sql_condition = "AND T2.is_chessboard = 1"
-    elif filter_type == 'non_chessboard':
-        sql_condition = "AND (T2.is_chessboard = 0 OR T2.is_chessboard IS NULL)"
+    # METRİKLER (PDF geneli)
+    chess_count = db.execute("""
+        SELECT COUNT(*)
+        FROM pdf_images T1
+        INNER JOIN image_features T2 ON T1.id = T2.image_id
+        WHERE T1.file_id = ?
+          AND T2.is_chessboard = 1
+    """, (file_id,)).fetchone()[0]
 
-    if fen_enabled:
-        query = f"""
-            SELECT
-                T1.page_no,
-                T1.image_index,
-                T2.is_chessboard,
-                T2.chessboard_score,
-                CF.fen_format AS fen,
-                CF.created_at AS fen_created_at
-            FROM pdf_images T1
-            INNER JOIN image_features T2 ON T1.id = T2.image_id
-            LEFT JOIN chess_fen CF ON CF.image_id = T1.id
-            WHERE T1.file_id = ? {sql_condition}
-            ORDER BY T1.page_no, T1.image_index
-        """
-    else:
-        query = f"""
-            SELECT
-                T1.page_no,
-                T1.image_index,
-                T2.is_chessboard,
-                T2.chessboard_score
-            FROM pdf_images T1
-            INNER JOIN image_features T2 ON T1.id = T2.image_id
-            WHERE T1.file_id = ? {sql_condition}
-            ORDER BY T1.page_no, T1.image_index
-        """
+    non_chess_count = db.execute("""
+        SELECT COUNT(*)
+        FROM pdf_images T1
+        INNER JOIN image_features T2 ON T1.id = T2.image_id
+        WHERE T1.file_id = ?
+          AND (T2.is_chessboard = 0 OR T2.is_chessboard IS NULL)
+    """, (file_id,)).fetchone()[0]
 
-    images = db.execute(query, (file_id,)).fetchall()
+    ocr_non_chess_count = db.execute("""
+        SELECT COUNT(*)
+        FROM pdf_images T1
+        INNER JOIN image_features T2 ON T1.id = T2.image_id
+        LEFT JOIN ocr_extracts OE ON OE.image_id = T1.id
+        WHERE T1.file_id = ?
+          AND (T2.is_chessboard = 0 OR T2.is_chessboard IS NULL)
+          AND OE.text_raw IS NOT NULL
+          AND TRIM(OE.text_raw) != ''
+    """, (file_id,)).fetchone()[0]
+
+    query = f"""
+        SELECT
+            T1.id AS image_id,
+            T1.page_no,
+            T1.image_index,
+            T2.is_chessboard,
+            T2.chessboard_score,
+
+            CF.fen_format AS fen,
+            CF.created_at AS fen_created_at,
+
+            OE.text_raw AS ocr_text
+
+        FROM pdf_images T1
+        INNER JOIN image_features T2 ON T1.id = T2.image_id
+        LEFT JOIN chess_fen CF ON CF.image_id = T1.id
+        LEFT JOIN ocr_extracts OE ON OE.image_id = T1.id
+
+        WHERE T1.file_id = ? {sql_condition}
+        ORDER BY T1.page_no, T1.image_index
+    """
+
+    rows = db.execute(query, (file_id,)).fetchall()
 
     processed_images = []
-    pdf_stem = os.path.splitext(pdf_name)[0]
-
-    for row in images:
-        image_index_db = row['image_index']
+    for r in rows:
+        image_index_db = r["image_index"]
         img_index = image_index_db // 1000
         rect_i = image_index_db % 1000
 
-        thumb_name = f"{pdf_stem}_p{row['page_no']}_{img_index}_{rect_i}.png"
+        thumb_name = f"{pdf_stem}_p{r['page_no']}_{img_index}_{rect_i}.png"
 
-        item = {
-            'page': row['page_no'],
-            'index': row['image_index'],
-            'is_chessboard': row['is_chessboard'] if row['is_chessboard'] is not None else 0,
-            'score': f"{row['chessboard_score']:.2f}" if row['chessboard_score'] is not None else "0.00",
-            'thumbnail_url': url_for('static_images', filename=thumb_name),
-        }
-
-        if fen_enabled:
-            item['fen'] = row['fen']
-            item['fen_created_at'] = row['fen_created_at']
-
-        processed_images.append(item)
+        processed_images.append({
+            "image_id": r["image_id"],
+            "page": r["page_no"],
+            "index": r["image_index"],
+            "is_chessboard": r["is_chessboard"] if r["is_chessboard"] is not None else 0,
+            "score": f"{r['chessboard_score']:.2f}" if r["chessboard_score"] is not None else "0.00",
+            "thumbnail_url": url_for("static_images", filename=thumb_name),
+            "fen": r["fen"],
+            "fen_created_at": r["fen_created_at"],
+            "ocr_text": r["ocr_text"],
+        })
 
     return render_template(
-        'pdf_detail.html',
+        "pdf_detail.html",
         pdf_name=pdf_name,
         images=processed_images,
         file_id=file_id,
         current_filter=filter_type,
         fen_enabled=fen_enabled,
+        chess_count=chess_count,
+        non_chess_count=non_chess_count,
+        ocr_non_chess_count=ocr_non_chess_count
     )
 
-
-# ============================================================
-# MAIN ROUTE
-# ============================================================
 
 @app.route('/')
 def index():
@@ -357,7 +349,8 @@ def index():
         tables=tables,
         summary=final_summary,
         charts_data=charts_data,
-        pdfs=pdf_rows
+        pdfs=pdf_rows,
+        fen_enabled_ids=FEN_ENABLED_FILE_IDS
     )
 
 

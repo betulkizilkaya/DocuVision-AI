@@ -1,282 +1,960 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
-    <title>{{ pdf_name }} Görsel Analiz</title>
+    <meta charset="UTF-8" />
+    <title>{{ pdf_name }} | Visual Analysis</title>
+
+    <!-- Fonts + Bootstrap -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <style>
-        .image-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-        .image-card {
-            border: 1px solid #ddd;
-            padding: 10px;
-            width: 180px;
-            text-align: center;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
-            border-radius: 8px;
-        }
-        .is-chessboard {
-            background-color: #d4edda; /* Yeşilimsi ton */
-            border-color: #c3e6cb;
-            color: #155724;
-        }
-        .image-card img {
-            max-width: 100%;
-            height: auto;
-            object-fit: contain;
-            border-radius: 6px;
-        }
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
-        /* FEN UI */
-        .fen-box {
-            margin-top: 8px;
-            padding: 6px;
-            background: rgba(255, 255, 255, 0.7);
-            border: 1px dashed rgba(0,0,0,0.2);
-            border-radius: 6px;
-            text-align: left;
-            font-size: 12px;
-            color: #1f2d1f;
-        }
-        .fen-code {
-            display: block;
-            margin-top: 4px;
-            padding: 6px;
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 6px;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-            word-break: break-all;
-            white-space: normal;
-        }
-        .fen-actions {
-            display: flex;
-            gap: 6px;
-            margin-top: 6px;
-            align-items: center;
-        }
-        .fen-muted {
-            color: #6c757d;
-            font-size: 12px;
-        }
-    </style>
+ <style>
+  :root{
+    --pd-card-radius: 16px;
+    --pd-soft-shadow: 0 10px 30px rgba(0,0,0,.08);
+    --pd-soft-shadow-hover: 0 16px 40px rgba(0,0,0,.14);
+    --pd-border: rgba(0,0,0,.08);
+    --pd-glass: rgba(255,255,255,.75);
+    --pd-glass-border: rgba(0,0,0,.12);
+    --pd-muted: #6c757d;
+  }
+
+  body{
+    font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  }
+
+  /* =========================
+     HERO / HEADER (PRO)
+  ========================= */
+  .pd-hero{
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    padding: 18px 18px;
+    border: 1px solid rgba(0,0,0,.08);
+    background: #ffffff;
+    box-shadow: 0 6px 18px rgba(0,0,0,.06);
+  }
+
+  .pd-hero::after{ content:none; }
+
+  .pd-hero::before{
+    content:"";
+    position:absolute;
+    inset:0 0 auto 0;
+    height: 4px;
+    background: linear-gradient(90deg, #178f6a, #1fa37a);
+  }
+
+  .pd-hero-title{
+    font-weight: 800;
+    letter-spacing: .1px;
+    margin-top: 6px;
+  }
+
+  .pd-hero-sub{
+    color: rgba(0,0,0,.55);
+    margin-bottom: 0;
+    max-width: 1100px;
+  }
+
+  /* =========================
+     METRIC CARDS
+  ========================= */
+  .pd-metric{
+    border: 1px solid var(--pd-border);
+    border-radius: 16px;
+    background: rgba(255,255,255,.92);
+    box-shadow: 0 8px 22px rgba(0,0,0,.06);
+    padding: 14px 14px;
+    height: 100%;
+  }
+  .pd-metric .label{
+    font-size: 12px;
+    color: var(--pd-muted);
+  }
+  .pd-metric .value{
+    font-weight: 800;
+    font-size: 20px;
+    line-height: 1.1;
+  }
+
+  /* =========================
+     FILTER PILLS
+  ========================= */
+  .pd-filters .btn{
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-weight: 700;
+  }
+
+  /* =========================
+     IMAGE GRID
+  ========================= */
+  .pd-grid{
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 1400px){
+    .pd-grid{ grid-template-columns: repeat(5, 1fr); }
+  }
+  @media (max-width: 1200px){
+    .pd-grid{ grid-template-columns: repeat(4, 1fr); }
+  }
+  @media (max-width: 992px){
+    .pd-grid{ grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 576px){
+    .pd-grid{ grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* =========================
+     IMAGE CARD
+  ========================= */
+  .pd-card{
+    position: relative;
+    border-radius: var(--pd-card-radius);
+    overflow: hidden;
+    background: rgba(255,255,255,.96);
+    border: 1px solid var(--pd-border);
+    box-shadow: 0 10px 28px rgba(0,0,0,.07);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  }
+  .pd-card:hover{
+    transform: translateY(-4px);
+    box-shadow: var(--pd-soft-shadow-hover);
+    border-color: rgba(23,143,106,.28); /* yeşil vurgu */
+  }
+
+  .pd-thumb{
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: contain;
+    background: linear-gradient(180deg, rgba(0,0,0,.02), rgba(0,0,0,.04));
+    cursor: zoom-in;
+  }
+
+  /* Status badge */
+  .pd-badge{
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 2;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 800;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,.45);
+    box-shadow: 0 8px 18px rgba(0,0,0,.10);
+  }
+  .pd-badge.ok{
+    background: rgba(25,135,84,.18);
+    color: #0f5132;
+  }
+  .pd-badge.no{
+    background: rgba(220,53,69,.18);
+    color: #842029;
+  }
+
+  .pd-card-body{
+    padding: 12px 12px 14px 12px;
+  }
+  .pd-meta{
+    display:flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .pd-page{
+    font-weight: 800;
+  }
+  .pd-score{
+    font-size: 12px;
+    color: var(--pd-muted);
+  }
+
+  /* =========================
+     FEN / OCR BOX
+  ========================= */
+  .pd-box{
+    margin-top: 10px;
+    border-radius: 14px;
+    padding: 10px;
+    background: var(--pd-glass);
+    border: 1px solid var(--pd-glass-border);
+  }
+  .pd-box .title{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    font-weight: 800;
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  .pd-code{
+    display:block;
+    padding: 10px;
+    border-radius: 12px;
+    background: rgba(248,249,250,.95);
+    border: 1px solid rgba(0,0,0,.08);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 140px;
+    overflow:auto;
+  }
+  .pd-actions{
+    display:flex;
+    gap: 8px;
+    align-items:center;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+  .pd-muted{
+    color: var(--pd-muted);
+    font-size: 12px;
+  }
+
+  /* Pagination */
+  .pagination .page-link{
+    border-radius: 12px;
+    margin: 0 3px;
+  }
+
+  /* hero layout */
+.pd-hero-top{
+  display:flex;
+  align-items:center;
+  justify-content: flex-end; /* sola boşluk yok */
+  gap: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(0,0,0,.06);
+}
+
+
+.pd-back{
+  border-radius: 10px;
+}
+
+.pd-theme{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+
+.pd-theme-label{
+  font-size: 15px;
+  color: rgba(0,0,0,.55);
+  font-weight: 700;
+}
+
+.pd-hero-main{
+  display:flex;
+  align-items:flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.pd-hero-left{
+  display:flex;
+  align-items:flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pd-hero-icon{
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(23,143,106,.10);
+  border: 1px solid rgba(23,143,106,.18);
+  color: rgba(15,81,50,1);
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.pd-hero-text{
+  min-width: 0;
+}
+
+.pd-hero-file{
+  font-weight: 800;
+  font-size: 16px;
+  color: rgba(0,0,0,.70);
+  overflow:hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 980px;
+}
+
+.pd-hero-chips{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.pd-chip{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 12px;
+  border: 1px solid rgba(0,0,0,.10);
+  background: rgba(248,249,250,1);
+  color: rgba(0,0,0,.72);
+  white-space: nowrap;
+}
+.pd-chip.green{
+  border-color: rgba(23,143,106,.25);
+  background: rgba(23,143,106,.10);
+  color: rgba(15,81,50,1);
+}
+.pd-chip.red{
+  border-color: rgba(220,53,69,.22);
+  background: rgba(220,53,69,.10);
+  color: rgba(132,32,41,1);
+}
+
+@media (max-width: 992px){
+  .pd-hero-main{
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pd-hero-chips{
+    justify-content: flex-start;
+  }
+}
+
+.pd-theme .form-check-input{
+  transform: scale(1.15);   /* %15 daha büyük */
+  cursor: pointer;
+}
+
+
+/* dark mode uyumu */
+body.dark-mode .pd-hero-top{
+  border-bottom-color: rgba(255,255,255,.08);
+}
+body.dark-mode .pd-theme-label{
+  color: rgba(255,255,255,.65);
+}
+body.dark-mode .pd-hero-file{
+  color: rgba(255,255,255,.78);
+}
+body.dark-mode .pd-chip{
+  background: rgba(255,255,255,.06);
+  border-color: rgba(255,255,255,.12);
+  color: rgba(255,255,255,.82);
+}
+
+
+  /* =========================
+     DARK MODE (PRO)
+  ========================= */
+  body.dark-mode .pd-hero{
+    background: rgba(25,25,28,.92);
+    border-color: rgba(255,255,255,.10);
+    box-shadow: 0 10px 26px rgba(0,0,0,.35);
+  }
+  body.dark-mode .pd-hero-sub{
+    color: rgba(255,255,255,.70);
+  }
+
+  body.dark-mode .pd-metric,
+  body.dark-mode .pd-card{
+    background: rgba(25,25,28,.86);
+    border-color: rgba(255,255,255,.10);
+    color: rgba(255,255,255,.92);
+  }
+
+  body.dark-mode .pd-card:hover{
+    border-color: rgba(23,143,106,.35);
+  }
+
+  body.dark-mode .pd-score,
+  body.dark-mode .pd-muted{
+    color: rgba(255,255,255,.65);
+  }
+
+  body.dark-mode .pd-box{
+    background: rgba(25,25,28,.72);
+    border-color: rgba(255,255,255,.12);
+  }
+
+  body.dark-mode .pd-code{
+    background: rgba(0,0,0,.22);
+    border-color: rgba(255,255,255,.10);
+    color: rgba(255,255,255,.88);
+  }
+
+  /* Modal image */
+  .pd-modal-img{
+    max-height: 80vh;
+    cursor: grab;
+    user-select: none;
+  }
+</style>
+
 </head>
-<body>
-    <div class="container my-5">
-        <a href="{{ url_for('index') }}" class="btn btn-secondary mb-4">
-            <i class="bi bi-arrow-left"></i> Ana Sayfaya Dön
-        </a>
 
-        <h1>PDF Detayı: {{ pdf_name }}</h1>
+<body id="pageBody">
+<div class="container-fluid my-4">
 
-        <p class="mt-4">
-            <strong>Filtreler:</strong>
+    <!-- HEADER -->
+<section class="pd-hero mb-4">
+  <!-- üst bar -->
+  <div class="pd-hero-top">
+
+    <div class="pd-theme">
+      <span class="pd-theme-label">Theme</span>
+      <div class="form-check form-switch m-0">
+        <input class="form-check-input" type="checkbox" role="switch" id="checkboxToggle">
+      </div>
+    </div>
+  </div>
+
+  <!-- ana içerik -->
+  <div class="pd-hero-main">
+    <div class="pd-hero-left">
+      <div class="pd-hero-icon">
+        <i class="bi bi-file-earmark-pdf"></i>
+      </div>
+
+      <div class="pd-hero-text">
+        <h1 class="pd-hero-title mb-1">PDF Detayı</h1>
+        <div class="pd-hero-file" title="{{ pdf_name }}">{{ pdf_name }}</div>
+        <p class="pd-hero-sub mt-2">
+          Satranç tahtası tespiti, FEN üretimi (seçili PDF’ler) ve satranç dışı görseller için OCR çıktıları.
+        </p>
+      </div>
+    </div>
+
+    <div class="pd-hero-chips">
+      <span class="pd-chip">
+        <i class="bi bi-images"></i> Toplam: {{ images|length }}
+      </span>
+      <span class="pd-chip green">
+        <i class="bi bi-check2-circle"></i> Tahta: {{ chess_count|default(0) }}
+      </span>
+      <span class="pd-chip red">
+        <i class="bi bi-x-circle"></i> Diğer: {{ non_chess_count|default(0) }}
+      </span>
+    </div>
+  </div>
+</section>
+
+
+
+    <!-- METRICS (opsiyonel ama görsel olarak “dolu” hissettirir) -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="pd-metric">
+                <div class="label"><i class="bi bi-collection me-1"></i> Görsel Sayısı</div>
+                <div class="value">{{ images|length }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="pd-metric">
+                <div class="label"><i class="bi bi-grid-3x3-gap me-1"></i> Sayfa Başına Kart</div>
+                <div class="value">24</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="pd-metric">
+                <div class="label"><i class="bi bi-check2-square me-1"></i> Chessboard</div>
+                <div class="value">{{ chess_count|default(0) }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="pd-metric">
+                <div class="label"><i class="bi bi-text-paragraph me-1"></i> OCR / Non-chess</div>
+                <div class="value">{{ ocr_non_chess_count|default(0) }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="pd-filters d-flex flex-wrap gap-2">
             <a href="{{ url_for('pdf_detail', file_id=file_id, filter='all') }}"
                class="btn btn-sm {% if current_filter == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">
-                Tümü
+                <i class="bi bi-layers me-1"></i> Tümü
             </a>
+
             <a href="{{ url_for('pdf_detail', file_id=file_id, filter='chessboard') }}"
                class="btn btn-sm {% if current_filter == 'chessboard' %}btn-success{% else %}btn-outline-success{% endif %}">
-                Satranç Tahtası Olanlar
+                <i class="bi bi-check2-circle me-1"></i> Satranç Tahtası Olanlar
             </a>
+
             <a href="{{ url_for('pdf_detail', file_id=file_id, filter='non_chessboard') }}"
                class="btn btn-sm {% if current_filter == 'non_chessboard' %}btn-danger{% else %}btn-outline-danger{% endif %}">
-                Tahta Olmayanlar
+                <i class="bi bi-x-circle me-1"></i> Tahta Olmayanlar
             </a>
-        </p>
+        </div>
 
-        <h3 class="mt-4">Görsel Analiz Sonuçları (Toplam: {{ images|length }})</h3>
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small">Hızlı Git:</span>
+            <input id="pageJump" class="form-control form-control-sm" style="width:140px" placeholder="Sayfa no..." />
+            <button class="btn btn-sm btn-outline-secondary" id="pageJumpBtn" type="button">
+                Git
+            </button>
+        </div>
+    </div>
 
-        {# =========================
-           PAGINATION CONFIG
-           ========================= #}
-        {% set per_page = 24 %}
-        {% set total = images|length %}
-        {% set pages = (total // per_page) + (1 if (total % per_page) > 0 else 0) %}
+    <!-- GRID -->
+    <div class="pd-grid" id="imageContainer">
+        {% for image in images %}
+        <div class="pd-card image-card">
+            {% if image.is_chessboard == 1 %}
+                <div class="pd-badge ok">
+                    ✅ TAHTA
+                </div>
+            {% else %}
+                <div class="pd-badge no">
+                    ❌ DİĞER
+                </div>
+            {% endif %}
 
-        <div class="image-container" id="imageContainer">
-            {% for image in images %}
-            <div class="image-card {% if image.is_chessboard == 1 %} is-chessboard {% endif %}">
-                <img src="{{ image.thumbnail_url }}" alt="Sayfa {{ image.page }}">
+            <img class="pd-thumb"
+                 src="{{ image.thumbnail_url }}"
+                 alt="Sayfa {{ image.page }}"
+                 data-bs-toggle="modal"
+                 data-bs-target="#imageModal"
+                 data-img-src="{{ image.thumbnail_url }}"
+                 data-page="{{ image.page }}">
 
-                <p class="mt-2">
-                    <strong>Sayfa {{ image.page }}</strong>
-                    <br>
-                    Bayrak:
-                    {% if image.is_chessboard == 1 %}
-                        <span style="font-weight: bold; color: green;">✅ TAHTA (Skor: {{ image.score }})</span>
-                    {% else %}
-                        <span style="color: red;">❌ Diğer (Skor: {{ image.score }})</span>
-                    {% endif %}
-                </p>
+            <div class="pd-card-body">
+                <div class="pd-meta">
+                    <div>
+                        <div class="pd-page">Sayfa {{ image.page }}</div>
+                        <div class="pd-score">Skor: {{ image.score }}</div>
+                    </div>
 
-                {# =========================
-                   FEN DISPLAY (ONLY FOR SELECTED PDFs)
-                   Backend'den fen_enabled True gelirse gösterilir.
-                   ========================= #}
+                    <div class="text-end">
+                        {% if image.is_chessboard == 1 %}
+                            <span class="badge text-bg-success-subtle border border-success-subtle text-success-emphasis">
+                                chessboard
+                            </span>
+                        {% else %}
+                            <span class="badge text-bg-danger-subtle border border-danger-subtle text-danger-emphasis">
+                                non-chess
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- FEN (sadece seçili PDF'lerde + chessboard) -->
                 {% if fen_enabled and image.is_chessboard == 1 %}
-                <div class="fen-box">
-                    <div><strong>FEN</strong></div>
+                <div class="pd-box">
+                    <div class="title">
+                        <i class="bi bi-diagram-3"></i> FEN
+                    </div>
 
                     {% if image.fen %}
-                        <code class="fen-code">{{ image.fen }}</code>
+                        <code class="pd-code">{{ image.fen }}</code>
 
-                        <div class="fen-actions">
-                            <button
-                                type="button"
-                                class="btn btn-sm btn-outline-secondary"
-                                data-fen="{{ image.fen|e }}"
-                                onclick="copyFen(this)"
-                                title="FEN metnini panoya kopyala">
-                                Kopyala
+                        <div class="pd-actions">
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary"
+                                    data-fen="{{ image.fen|e }}"
+                                    onclick="copyFen(this)">
+                                <i class="bi bi-clipboard me-1"></i> Kopyala
                             </button>
 
                             {% if image.fen_created_at %}
-                                <span class="fen-muted">{{ image.fen_created_at }}</span>
+                                <span class="pd-muted">{{ image.fen_created_at }}</span>
                             {% endif %}
                         </div>
                     {% else %}
-                        {# İstersen bu satırı tamamen kaldırabilirsin.
-                           fen_enabled=True ama ilgili görsele fen yoksa "Henüz üretilmedi" der. #}
-                        <span class="fen-muted">Henüz üretilmedi</span>
+                        <div class="pd-muted">Henüz üretilmedi</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- OCR (satranç olmayan görseller) -->
+                {% if image.is_chessboard != 1 %}
+                <div class="pd-box">
+                    <div class="title">
+                        <i class="bi bi-card-text"></i> OCR
+                    </div>
+
+                    {% if image.ocr_text %}
+                        <code class="pd-code">{{ image.ocr_text }}</code>
+                        <div class="pd-actions">
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary"
+                                    data-ocr="{{ image.ocr_text|e }}"
+                                    onclick="copyOcr(this)">
+                                <i class="bi bi-clipboard me-1"></i> Kopyala
+                            </button>
+                            <span class="pd-muted"> </span>
+                        </div>
+                    {% else %}
+                        <div class="pd-muted">OCR metni yok (NULL)</div>
                     {% endif %}
                 </div>
                 {% endif %}
             </div>
-            {% endfor %}
         </div>
-
-        {% if not images %}
-            <div class="alert alert-warning mt-4" role="alert">
-                Bu filtreye uygun görsel bulunamadı veya bu PDF'ten görsel çıkarılmadı.
-            </div>
-        {% endif %}
-
-        {# =========================
-           PAGINATION UI
-           ========================= #}
-        {% if images and pages > 1 %}
-        <nav aria-label="Image pagination" class="mt-4">
-            <ul class="pagination justify-content-center" id="pagination"></ul>
-        </nav>
-        {% endif %}
+        {% endfor %}
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    {# =========================
-       COPY FEN (ONLY IF ENABLED)
-       ========================= #}
-    {% if fen_enabled %}
-    <script>
-        async function copyFen(btn) {
-            try {
-                const fen = btn.getAttribute('data-fen') || '';
-                await navigator.clipboard.writeText(fen);
-
-                const original = btn.textContent;
-                btn.textContent = "Kopyalandı";
-                btn.disabled = true;
-                setTimeout(() => {
-                    btn.textContent = original;
-                    btn.disabled = false;
-                }, 900);
-            } catch (e) {
-                alert("Kopyalama başarısız. Tarayıcı izinlerini kontrol et.");
-            }
-        }
-    </script>
+    {% if not images %}
+        <div class="alert alert-warning mt-4" role="alert">
+            Bu filtreye uygun görsel bulunamadı veya bu PDF'ten görsel çıkarılmadı.
+        </div>
     {% endif %}
 
-    {# =========================
-       CLIENT-SIDE PAGINATION JS
-       ========================= #}
-    <script>
-    (function () {
-        const perPage = {{ per_page }};
-        const cards = Array.from(document.querySelectorAll('#imageContainer .image-card'));
-        const total = cards.length;
-        const totalPages = Math.ceil(total / perPage);
+    <!-- Pagination (client-side) -->
+    {% set per_page = 24 %}
+    {% set total = images|length %}
+    {% set pages = (total // per_page) + (1 if (total % per_page) > 0 else 0) %}
+
+    {% if images and pages > 1 %}
+    <nav aria-label="Image pagination" class="mt-4">
+        <ul class="pagination justify-content-center" id="pagination"></ul>
+    </nav>
+    {% endif %}
+
+</div>
+
+<!-- IMAGE MODAL -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="imageModalLabel">
+            <i class="bi bi-zoom-in me-2"></i> Image Preview
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body text-center position-relative">
+        <button type="button" class="btn btn-secondary position-absolute top-50 start-0 translate-middle-y"
+                id="prevImage" style="z-index:10;">&#10094;</button>
+
+        <img src="" id="modalImage" class="img-fluid pd-modal-img" alt="Full Image Preview">
+
+        <button type="button" class="btn btn-secondary position-absolute top-50 end-0 translate-middle-y"
+                id="nextImage" style="z-index:10;">&#10095;</button>
+      </div>
+
+      <div class="modal-footer d-flex justify-content-between">
+        <div class="small text-muted" id="modalMeta"> </div>
+        <div class="small text-muted">Zoom: mouse wheel, Pan: drag</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+{% if fen_enabled %}
+<script>
+async function copyFen(btn) {
+    try {
+        const fen = btn.getAttribute('data-fen') || '';
+        await navigator.clipboard.writeText(fen);
+        const original = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check2 me-1"></i> Kopyalandı';
+        btn.disabled = true;
+        setTimeout(() => { btn.innerHTML = original; btn.disabled = false; }, 900);
+    } catch (e) {
+        alert("Kopyalama başarısız. Tarayıcı izinlerini kontrol et.");
+    }
+}
+</script>
+{% endif %}
+
+<script>
+async function copyOcr(btn) {
+    try {
+        const t = btn.getAttribute('data-ocr') || '';
+        await navigator.clipboard.writeText(t);
+        const original = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check2 me-1"></i> Kopyalandı';
+        btn.disabled = true;
+        setTimeout(() => { btn.innerHTML = original; btn.disabled = false; }, 900);
+    } catch (e) {
+        alert("Kopyalama başarısız. Tarayıcı izinlerini kontrol et.");
+    }
+}
+</script>
+
+<script>
+/* ============================================================
+   THEME TOGGLE (ana sayfandaki localStorage mantığı ile uyumlu)
+============================================================ */
+(function(){
+    const body = document.getElementById('pageBody');
+    const toggle = document.getElementById('checkboxToggle');
+    const storageKey = 'pdf-analysis-theme';
+
+    if (!toggle) return;
+
+    const currentTheme = localStorage.getItem(storageKey);
+    if (currentTheme === 'dark') {
+        body.classList.add('dark-mode');
+        toggle.checked = true;
+    } else {
+        body.classList.remove('dark-mode');
+        toggle.checked = false;
+    }
+
+    toggle.addEventListener('change', function(){
+        if (this.checked) {
+            body.classList.add('dark-mode');
+            localStorage.setItem(storageKey, 'dark');
+        } else {
+            body.classList.remove('dark-mode');
+            localStorage.setItem(storageKey, 'light');
+        }
+    });
+})();
+</script>
+
+<script>
+/* ============================================================
+   PAGINATION (client-side)
+============================================================ */
+(function () {
+    const perPage = {{ per_page }};
+    const cards = Array.from(document.querySelectorAll('#imageContainer .image-card'));
+    const total = cards.length;
+    const totalPages = Math.ceil(total / perPage);
+    const pagination = document.getElementById('pagination');
+
+    if (!pagination || totalPages <= 1) {
+        // yine de ilk sayfayı göster
+        cards.forEach(c => c.style.display = 'block');
+        return;
+    }
+
+    function showPage(page) {
+        const start = (page - 1) * perPage;
+        const end = start + perPage;
+
+        cards.forEach((card, idx) => {
+            card.style.display = (idx >= start && idx < end) ? 'block' : 'none';
+        });
+
+        renderPagination(page);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function makeItem(label, page, disabled, active) {
+        const li = document.createElement('li');
+        li.className = 'page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : '');
+
+        const a = document.createElement('a');
+        a.className = 'page-link';
+        a.href = '#';
+        a.textContent = label;
+
+        a.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (!disabled) showPage(page);
+        });
+
+        li.appendChild(a);
+        return li;
+    }
+
+    function renderPagination(current) {
+        pagination.innerHTML = '';
+        pagination.appendChild(makeItem('«', current - 1, current === 1, false));
+
+        const windowSize = 7;
+        let start = Math.max(1, current - Math.floor(windowSize / 2));
+        let end = Math.min(totalPages, start + windowSize - 1);
+        start = Math.max(1, end - windowSize + 1);
+
+        if (start > 1) {
+            pagination.appendChild(makeItem('1', 1, false, current === 1));
+            if (start > 2) {
+                const dots = document.createElement('li');
+                dots.className = 'page-item disabled';
+                dots.innerHTML = '<span class="page-link">…</span>';
+                pagination.appendChild(dots);
+            }
+        }
+
+        for (let p = start; p <= end; p++) {
+            pagination.appendChild(makeItem(String(p), p, false, p === current));
+        }
+
+        if (end < totalPages) {
+            if (end < totalPages - 1) {
+                const dots = document.createElement('li');
+                dots.className = 'page-item disabled';
+                dots.innerHTML = '<span class="page-link">…</span>';
+                pagination.appendChild(dots);
+            }
+            pagination.appendChild(makeItem(String(totalPages), totalPages, false, current === totalPages));
+        }
+
+        pagination.appendChild(makeItem('»', current + 1, current === totalPages, false));
+    }
+
+    showPage(1);
+})();
+</script>
+
+<script>
+/* ============================================================
+   QUICK JUMP: sayfa no gir -> en yakın kartı bulup o kartın olduğu
+   pagination sayfasına geç
+============================================================ */
+(function(){
+    const input = document.getElementById('pageJump');
+    const btn = document.getElementById('pageJumpBtn');
+    const cards = Array.from(document.querySelectorAll('#imageContainer .image-card'));
+    const perPage = {{ per_page }};
+
+    if (!input || !btn || cards.length === 0) return;
+
+    function go(){
+        const v = (input.value || '').trim();
+        const n = parseInt(v, 10);
+        if (!Number.isFinite(n)) return;
+
+        // kartların içinde data-page'li img var
+        let idx = -1;
+        for (let i=0; i<cards.length; i++){
+            const img = cards[i].querySelector('img[data-page]');
+            const p = img ? parseInt(img.getAttribute('data-page'),10) : NaN;
+            if (p === n) { idx = i; break; }
+        }
+        if (idx === -1) return;
+
+        const page = Math.floor(idx / perPage) + 1;
+
+        // pagination showPage fonksiyonu closure içinde; bu yüzden basit hack:
+        // ilgili sayfa linkini tetikle
         const pagination = document.getElementById('pagination');
-
-        if (!pagination || totalPages <= 1) return;
-
-        function showPage(page) {
-            const start = (page - 1) * perPage;
-            const end = start + perPage;
-
-            cards.forEach((card, idx) => {
-                card.style.display = (idx >= start && idx < end) ? 'block' : 'none';
-            });
-
-            renderPagination(page);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (pagination){
+            const links = Array.from(pagination.querySelectorAll('a.page-link'));
+            const target = links.find(a => a.textContent === String(page));
+            if (target) target.click();
         }
 
-        function makeItem(label, page, disabled, active) {
-            const li = document.createElement('li');
-            li.className = 'page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : '');
+        // kartı biraz highlight etmek
+        setTimeout(() => {
+            cards[idx].scrollIntoView({behavior:'smooth', block:'center'});
+            cards[idx].style.outline = '3px solid rgba(13,110,253,.45)';
+            cards[idx].style.outlineOffset = '3px';
+            setTimeout(()=> {
+                cards[idx].style.outline = '';
+                cards[idx].style.outlineOffset = '';
+            }, 1200);
+        }, 250);
+    }
 
-            const a = document.createElement('a');
-            a.className = 'page-link';
-            a.href = '#';
-            a.textContent = label;
+    btn.addEventListener('click', go);
+    input.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') go(); });
+})();
+</script>
 
-            a.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (!disabled) showPage(page);
-            });
+<script>
+/* ============================================================
+   IMAGE MODAL: click image -> modal + gallery through visible page
+   (Basit: tüm kartlar gallery)
+============================================================ */
+(function(){
+    const modalEl = document.getElementById('imageModal');
+    const modalImg = document.getElementById('modalImage');
+    const modalMeta = document.getElementById('modalMeta');
+    const prevBtn = document.getElementById('prevImage');
+    const nextBtn = document.getElementById('nextImage');
 
-            li.appendChild(a);
-            return li;
-        }
+    if (!modalEl || !modalImg || !prevBtn || !nextBtn) return;
 
-        function renderPagination(current) {
-            pagination.innerHTML = '';
+    let modalImages = [];
+    let modalPages = [];
+    let currentIndex = 0;
 
-            // Prev
-            pagination.appendChild(makeItem('«', current - 1, current === 1, false));
+    modalEl.addEventListener('show.bs.modal', function(event){
+        const trigger = event.relatedTarget;
+        if (!trigger) return;
 
-            // Windowed page numbers
-            const windowSize = 7;
-            let start = Math.max(1, current - Math.floor(windowSize / 2));
-            let end = Math.min(totalPages, start + windowSize - 1);
-            start = Math.max(1, end - windowSize + 1);
+        const all = Array.from(document.querySelectorAll('#imageContainer img[data-img-src]'));
+        modalImages = all.map(x => x.getAttribute('data-img-src'));
+        modalPages = all.map(x => x.getAttribute('data-page'));
 
-            if (start > 1) {
-                pagination.appendChild(makeItem('1', 1, false, current === 1));
-                if (start > 2) {
-                    const dots = document.createElement('li');
-                    dots.className = 'page-item disabled';
-                    dots.innerHTML = '<span class="page-link">…</span>';
-                    pagination.appendChild(dots);
-                }
-            }
+        const clickedSrc = trigger.getAttribute('data-img-src');
+        currentIndex = Math.max(0, modalImages.indexOf(clickedSrc));
 
-            for (let p = start; p <= end; p++) {
-                pagination.appendChild(makeItem(String(p), p, false, p === current));
-            }
+        modalImg.src = modalImages[currentIndex] || clickedSrc || '';
+        modalMeta.textContent = 'Sayfa: ' + (modalPages[currentIndex] || '-');
+        resetTransform();
+    });
 
-            if (end < totalPages) {
-                if (end < totalPages - 1) {
-                    const dots = document.createElement('li');
-                    dots.className = 'page-item disabled';
-                    dots.innerHTML = '<span class="page-link">…</span>';
-                    pagination.appendChild(dots);
-                }
-                pagination.appendChild(makeItem(String(totalPages), totalPages, false, current === totalPages));
-            }
+    function show(i){
+        if (!modalImages.length) return;
+        currentIndex = (i + modalImages.length) % modalImages.length;
+        modalImg.src = modalImages[currentIndex];
+        modalMeta.textContent = 'Sayfa: ' + (modalPages[currentIndex] || '-');
+        resetTransform();
+    }
 
-            // Next
-            pagination.appendChild(makeItem('»', current + 1, current === totalPages, false));
-        }
+    nextBtn.addEventListener('click', ()=> show(currentIndex + 1));
+    prevBtn.addEventListener('click', ()=> show(currentIndex - 1));
 
-        // Start at page 1
-        showPage(1);
-    })();
-    </script>
+    // Zoom & Pan
+    let scale = 1;
+    let isDragging = false;
+    let startX, startY, originX = 0, originY = 0;
+
+    function applyTransform(){
+        modalImg.style.transform = `translate(${originX}px, ${originY}px) scale(${scale})`;
+    }
+    function resetTransform(){
+        scale = 1;
+        originX = 0; originY = 0;
+        applyTransform();
+    }
+
+    modalImg.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        scale += e.deltaY * -0.001;
+        scale = Math.min(Math.max(1, scale), 5);
+        applyTransform();
+    });
+
+    modalImg.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        modalImg.style.cursor = 'grabbing';
+        startX = e.clientX - originX;
+        startY = e.clientY - originY;
+    });
+
+    document.addEventListener('mouseup', () => {
+        isDragging = false;
+        modalImg.style.cursor = 'grab';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        originX = e.clientX - startX;
+        originY = e.clientY - startY;
+        applyTransform();
+    });
+})();
+</script>
+
 </body>
 </html>

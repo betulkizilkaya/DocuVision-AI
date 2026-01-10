@@ -593,3 +593,57 @@ body.dark-mode {
 #modalImage:active {
     cursor: grabbing;
 }
+
+/* Aksiyon hücresinde tek satır, düzgün hizalama */
+.action-wrap{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+/* Modern buton */
+.btn-nexus{
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-weight: 700;
+  letter-spacing: .2px;
+  color: #ffffff;
+  /* Senin attığın yeşilin 1 tık koyusu */
+  background: linear-gradient(
+    135deg,
+    #1fa37a,
+    #178f6a
+  );
+
+  box-shadow: 0 8px 20px rgba(23, 143, 106, .25);
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+  white-space: nowrap;
+}
+
+.btn-nexus:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(23, 143, 106, .35);
+  filter: brightness(1.03);
+  color: #ffffff;
+}
+
+.btn-nexus:active{
+  transform: translateY(0);
+}
+
+/* FEN VAR pill (badge yerine custom) */
+.fen-pill{
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 12px;
+  color: #0f5132;
+  background: rgba(25,135,84,.14);
+  border: 1px solid rgba(25,135,84,.25);
+  white-space: nowrap;
+}
+
