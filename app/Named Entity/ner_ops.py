@@ -10,6 +10,10 @@ _space = re.compile(r"\s+")
 _punct_edges = re.compile(r"^[\W_]+|[\W_]+$")
 
 def normalize_name(s: str) -> str:
+    _TITLES = {
+        "dr", "dr.", "prof", "prof.", "doç", "doç.", "doc", "doc.",
+        "asst", "asst.", "assist", "assist.", "av", "av."
+    }
     """
     Kişi isimlerini tekilleştirmek için basit normalizasyon.
     text_similarity’deki mantığa benzer (NFKC + whitespace + casefold).
@@ -17,11 +21,74 @@ def normalize_name(s: str) -> str:
     s = unicodedata.normalize("NFKC", s)
     s = _space.sub(" ", s.strip())
     s = s.casefold()
+    # Ünvanları temizle (başta/arada)
+    parts = [p for p in s.split(" ") if p not in _TITLES]
+    s = " ".join(parts)
+
     # Türkçe i̇ problemi
     s = s.replace("i̇", "i")
     # baş/son noktalama temizle
     s = _punct_edges.sub("", s)
     return s
+
+_BAD_PERSON_TAIL = {
+    # TR kurum/kuruluş bitişleri
+    "üniversitesi", "universitesi", "fakültesi", "fakultesi", "bölümü", "bolumu",
+    "müdürlüğü", "mudurlugu", "bakanlığı", "bakanligi", "kurumu", "kuruluşu", "kurulusu",
+    # şirket ekleri
+    "a.ş", "a.s", "ltd", "limited", "inc", "corp", "co"
+}
+
+_BAD_PERSON_WORDS = {
+    # satranç/kitap domaininde PERSON zannedilen yaygın kelimeler
+    "chess", "department", "exercises", "beginner", "beginners", "champion",
+    "game", "attack", "opening", "lines", "black", "white", "king", "queen", "rook",
+    "bishop", "knight", "pawn", "mate"
+}
+
+def is_valid_person(ent_text: str) -> bool:
+    t = ent_text.strip()
+    if not t:
+        return False
+
+    # rakam içeriyorsa (Black 93, Chapter 2 vb.) ele
+    if any(ch.isdigit() for ch in t):
+        return False
+
+    # tek kelime PERSON genelde hatalı (White, Deadly, Cornered vb.)
+    parts = [p for p in t.split() if p]
+    if len(parts) < 2:
+        return False
+
+    # çok kısa token ele
+    if any(len(p) < 2 for p in parts):
+        return False
+
+    # tamamen büyük harfli kısaltmalar (PDF, SQL vb.)
+    letters = [ch for ch in t if ch.isalpha()]
+    if letters and all(ch.isupper() for ch in letters):
+        return False
+
+    # normalize üzerinden son kelime kontrolü
+    norm = normalize_name(t)
+    if not norm:
+        return False
+    norm_parts = norm.split()
+
+    # ünvanları normalize_name zaten siliyor; yine de güvenlik
+    if len(norm_parts) < 2:
+        return False
+
+    last = norm_parts[-1]
+    if last in _BAD_PERSON_TAIL:
+        return False
+
+    # “tamamı domain kelimesi” ise ele (örn: "chess department")
+    # (en az 2 kelime ama ikisi de bad list ise)
+    if all(p in _BAD_PERSON_WORDS for p in norm_parts):
+        return False
+
+    return True
 
 def ensure_ner_indexes(conn: sqlite3.Connection) -> None:
     """
@@ -109,13 +176,18 @@ def regex_fallback_persons(text: str) -> List[str]:
     """
     # Örn: "Magnus Carlsen", "Garry Kasparov"
     # Türkçe için: "Ahmet Yılmaz"
-    pattern = re.compile(r"\b([A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?:\s+[A-ZÇĞİÖŞÜ][a-zçğıöşü]+){1,3})\b")
+    pattern = re.compile(r"\b([A-ZÇĞİÖŞÜ][a-zçğıöşü]{2,}(?:\s+[A-ZÇĞİÖŞÜ][a-zçğıöşü]{2,}){1,3})\b")
     return [m.group(1).strip() for m in pattern.finditer(text)]
 
 def extract_entities(text: str, nlp=None) -> List[Tuple[str, str]]:
-    """
-    return: [(ent_text, ent_type), ...]
-    """
+    LABEL_MAP = {
+        "PER": "PERSON",
+        "PERSON": "PERSON",
+        "ORG": "ORG",
+        "LOC": "LOC",
+        "GPE": "GPE"
+    }
+
     if nlp is None:
         persons = regex_fallback_persons(text)
         return [(p, "PERSON") for p in persons]
@@ -123,12 +195,14 @@ def extract_entities(text: str, nlp=None) -> List[Tuple[str, str]]:
     doc = nlp(text)
     out = []
     for ent in doc.ents:
-        # spaCy etiketleri: PERSON, ORG, GPE, LOC, DATE...
-        out.append((ent.text, ent.label_))
+        lab = ent.label_
+        lab = LABEL_MAP.get(lab, lab)
+        out.append((ent.text, lab))
+
     return out
 
 def run_ner(conn: sqlite3.Connection,
-            model_name: str = "xx_ent_wiki_sm",
+            model_name: str = "en_core_web_sm",
             file_id: Optional[int] = None,
             commit_every: int = 500) -> None:
     """
@@ -161,6 +235,8 @@ def run_ner(conn: sqlite3.Connection,
             ent_count += 1
 
             if ent_type == "PERSON":
+                if not is_valid_person(ent_text):
+                    continue
                 norm = normalize_name(ent_text)
                 if not norm:
                     continue

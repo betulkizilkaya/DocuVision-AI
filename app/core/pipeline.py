@@ -42,7 +42,7 @@ def _run_pdf_extract() -> None:
     pdf_extract modülünde fonksiyon adı projeden projeye değişebiliyor.
     Bu yüzden iki olası ismi destekliyoruz.
     """
-    from app.core import pdf_extract
+    from app.script import pdf_extract
 
     if hasattr(pdf_extract, "process_all_pdfs"):
         pdf_extract.process_all_pdfs()
