@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+#https://docs.opencv.org/4.x/d9/db0/tutorial_hough_lines.html
 
 from __future__ import annotations
 
