@@ -84,7 +84,10 @@ def crop_by_corners_or_none(roi_bgr: np.ndarray, p: CornerParams) -> Optional[np
         return None
     H, W = gray.shape[:2]
     l, t, r, b = compute_outer_crop_box(corners, W, H, p)
-    return roi_bgr[t:b, l:r].copy()
+
+    # ESKİ: return roi_bgr[t:b, l:r].copy()
+    # YENİ (r,b inclusive clamp ediyorsun, slice exclusive olduğu için +1):
+    return roi_bgr[t:b + 1, l:r + 1].copy()
 
 
 # -----------------------------
@@ -438,11 +441,57 @@ def extract_features_for_clf(board_bgr: np.ndarray, p: ClfParams) -> np.ndarray:
 
 def clf_is_chessboard(clf, board_bgr: np.ndarray, p: ClfParams) -> Tuple[bool, float]:
     feat = extract_features_for_clf(board_bgr, p)
+
     if hasattr(clf, "predict_proba"):
-        proba = float(clf.predict_proba(feat)[0][1])
-        return (proba >= p.proba_threshold), proba
+        probs = clf.predict_proba(feat)[0]
+
+        if hasattr(clf, "classes_"):
+            classes = list(clf.classes_)
+            score = float(probs[classes.index(1)])
+        else:
+            score = float(probs[1])
+
+        return (score >= p.proba_threshold), score
+
     pred = int(clf.predict(feat)[0])
     return (pred == 1), float(pred)
+
+def _box_area(l: int, t: int, r: int, b: int) -> int:
+    # r,b inclusive
+    return max(0, (r - l + 1)) * max(0, (b - t + 1))
+
+def _is_near_fullpage_crop(
+    l: int, t: int, r: int, b: int, W: int, H: int,
+    min_cover_ratio: float = 0.55,
+    max_margin_ratio: float = 0.08,
+    aspect_min: float = 0.80,
+    aspect_max: float = 1.25,
+) -> bool:
+    """
+    Bu crop, sayfanın büyük kısmını kaplıyor mu ve yaklaşık kare mi?
+    (Sayfanın zaten tek bir paddingsiz tahta olduğu senaryoyu yakalamak için.)
+    """
+    crop_area = _box_area(l, t, r, b)
+    img_area = W * H
+    if img_area <= 0:
+        return False
+    if crop_area / float(img_area) < min_cover_ratio:
+        return False
+
+    # margin'ler küçük mü?
+    mx_l = l / float(W)
+    mx_r = (W - 1 - r) / float(W)
+    my_t = t / float(H)
+    my_b = (H - 1 - b) / float(H)
+    if max(mx_l, mx_r, my_t, my_b) > max_margin_ratio:
+        return False
+
+    ww = (r - l + 1)
+    hh = (b - t + 1)
+    if hh <= 0:
+        return False
+    asp = ww / float(hh)
+    return (aspect_min <= asp <= aspect_max)
 
 
 # -----------------------------
@@ -457,32 +506,57 @@ def extract_final_boards_from_page(
     clf_p: ClfParams,
 ) -> List[Tuple[np.ndarray, str, float]]:
     """
-    Returns list of (final_board_bgr, source, clf_score)
-    source: corners | hough_clf
-    clf_score: corners için -1.0
+    Yeni sıra:
+      0) FULL PAGE corner/grid kontrol
+      1) ROI -> corner
+      2) ROI -> hough/border/fallback -> clf
     """
     finals: List[Tuple[np.ndarray, str, float]] = []
+
+    # ---------------------------------------------------------
+    # 0) FULL PAGE: sayfa zaten paddingsiz/düzgün tahta mı?
+    # ---------------------------------------------------------
+    full_gray = cv2.cvtColor(page_bgr, cv2.COLOR_BGR2GRAY)
+    full_corners = detect_corners_7x7(full_gray, corner_p)
+
+    if full_corners is not None:
+        H, W = full_gray.shape[:2]
+        l, t, r, b = compute_outer_crop_box(full_corners, W, H, corner_p)
+
+        if _is_near_fullpage_crop(l, t, r, b, W, H):
+            full_crop = page_bgr[t:b + 1, l:r + 1].copy()
+            finals.append((full_crop, "corners_fullpage", -1.0))
+
+            # Bu noktada ROI'nin yanlış yer seçmesi problemi zaten çözülüyor.
+            # Eğer "sayfada başka tahta da olabilir, ROI yine çalışsın" dersen
+            # burada return etme; aşağı devam et.
+            return finals
+
+    # ---------------------------------------------------------
+    # 1) ROI adaylarını bul
+    # ---------------------------------------------------------
     rois = find_candidate_rois(page_bgr, roi_p)
 
     for (x, y, w, h) in rois:
         roi = page_bgr[y:y + h, x:x + w].copy()
 
-        # 1) corner kontrol (istenen yapı)
+        # 1a) ROI üstünde corner ile direkt düzgün crop dene
         corner_crop = crop_by_corners_or_none(roi, corner_p)
         if corner_crop is not None:
             finals.append((corner_crop, "corners", -1.0))
             continue
 
-        # 2) corner yoksa: hough (ROI üzerinde)
+        # 2) corner yoksa: hough/border/fallback
         boards: List[np.ndarray] = []
+
         warped = warp_by_grid_lines(roi, hough_p)
         if warped is not None:
             boards.append(warped)
         else:
             border = find_border_rect_in_roi(roi, hough_p)
             if border is not None:
-                l, t, r, b = border
-                bgr = roi[t:b, l:r].copy()
+                l2, t2, r2, b2 = border
+                bgr = roi[t2:b2, l2:r2].copy()
                 bgr = cv2.resize(bgr, (hough_p.out_size, hough_p.out_size), interpolation=cv2.INTER_AREA)
                 boards.append(bgr)
             else:
@@ -491,7 +565,7 @@ def extract_final_boards_from_page(
                     fb = cv2.resize(fb, (hough_p.out_size, hough_p.out_size), interpolation=cv2.INTER_AREA)
                     boards.append(fb)
 
-        # 3) hough sonucu -> classifier
+        # 3) classifier
         for bgr in boards:
             ok, score = clf_is_chessboard(clf, bgr, clf_p)
             if ok:

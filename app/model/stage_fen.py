@@ -32,6 +32,38 @@ class FenParams:
     piece_model_path: str
     class_indices_path: str
 
+def apply_clahe_bgr(img_bgr: np.ndarray) -> np.ndarray:
+    lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+    l2 = clahe.apply(l)
+
+    lab2 = cv2.merge((l2, a, b))
+    return cv2.cvtColor(lab2, cv2.COLOR_LAB2BGR)
+
+
+def sharpen_bgr(img_bgr: np.ndarray, sigma: float = 1.2,
+                amount: float = 1.6, blur_weight: float = -0.6) -> np.ndarray:
+    blur = cv2.GaussianBlur(img_bgr, (0, 0), sigma)
+    sharp = cv2.addWeighted(img_bgr, amount, blur, blur_weight, 0)
+    return sharp
+
+
+def enhance_board_bgr(board_bgr: np.ndarray) -> np.ndarray:
+    h, w = board_bgr.shape[:2]
+
+    # önce çözünürlüğü artır
+    if min(h, w) < 900:
+        board_bgr = cv2.resize(board_bgr, (1024, 1024), interpolation=cv2.INTER_CUBIC)
+    else:
+        board_bgr = cv2.resize(board_bgr, (1024, 1024), interpolation=cv2.INTER_AREA)
+
+    # kontrast + netlik
+    board_bgr = apply_clahe_bgr(board_bgr)
+    board_bgr = sharpen_bgr(board_bgr, sigma=1.2, amount=1.6, blur_weight=-0.6)
+
+    return board_bgr
 
 def preprocess_cell(cell_bgr):
     gray = cv2.cvtColor(cell_bgr, cv2.COLOR_BGR2GRAY)
@@ -49,9 +81,10 @@ def load_piece_model_and_index(p: FenParams):
 
 def board_img_to_fen(board_img, model, idx_to_class: Dict[int, str]) -> str:
     h_orig, w_orig = board_img.shape[:2]
-    pad = int(w_orig * 0.05)
+
+    pad = int(w_orig * 0.08)
     clean = board_img[pad:h_orig - pad, pad:w_orig - pad]
-    clean = cv2.resize(clean, (512, 512))
+    clean = cv2.resize(clean, (512, 512), interpolation=cv2.INTER_AREA)
 
     cell_size = 512 // 8
     fen_rows = []
@@ -127,8 +160,13 @@ def save_board_and_fen(
     piece_model,
     idx_to_class: Dict[int, str],
 ) -> None:
-    board_bgr = cv2.resize(board_bgr, (640, 640), interpolation=cv2.INTER_AREA)
+    # önce temel boyutlandırma
+    board_bgr = cv2.resize(board_bgr, (640, 640), interpolation=cv2.INTER_CUBIC)
 
+    # sonra kalite artır
+    board_bgr = enhance_board_bgr(board_bgr)
+
+    # DB'ye artık netleştirilmiş hali kaydedilecek
     blob_png = encode_png(board_bgr)
     h, w = board_bgr.shape[:2]
     now = int(time.time())
@@ -142,7 +180,9 @@ def save_board_and_fen(
         (image_id, board_index, source, None if clf_score < 0 else float(clf_score), w, h, sqlite3.Binary(blob_png), now),
     )
 
+    # FEN de aynı iyileştirilmiş görüntüden üretilecek
     fen = board_img_to_fen(board_bgr, piece_model, idx_to_class)
+
     conn.execute(
         "INSERT OR REPLACE INTO chess_fen_multi (image_id, board_index, fen_format) VALUES (?, ?, ?)",
         (image_id, board_index, fen),
