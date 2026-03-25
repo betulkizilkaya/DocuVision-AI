@@ -183,3 +183,10 @@ cython_debug/
 # JetBrains / IDE files
 .idea/
 *.iml
+
+# image files
+*.jpg
+*.jpeg
+*.png
+*.tif
+*.tiff

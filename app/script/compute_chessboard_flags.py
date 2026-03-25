@@ -4,14 +4,11 @@ import joblib
 import numpy as np
 from pathlib import Path
 from PIL import Image
-
+from app.core.db import create_connection
 from app.core.paths import DB_PATH, ROOT_DIR
-MODEL_PATH = ROOT_DIR / "data" / "models" / "chessboard_clf.joblib"
+MODEL_PATH = ROOT_DIR / "data" / "models" / "chessboard_clf_v2.joblib"
 
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-
-def create_connection():
-    return sqlite3.connect(str(DB_PATH))
 
 # --- SINIFLANDIRICI (MODEL YÜKLEME VE ÖN İŞLEME) ---
 class ChessboardClassifier:

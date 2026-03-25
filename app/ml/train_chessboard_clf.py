@@ -11,20 +11,34 @@ from sklearn.metrics import classification_report, confusion_matrix
 
 ROOT_DIR = Path(__file__).resolve().parents[2]  # ProjectNexus-Intelligent-PDF-Analysis/
 DATASET_DIR = ROOT_DIR / "data" / "chessboard_dataset"
-MODEL_PATH = ROOT_DIR / "data" / "models" / "chessboard_clf.joblib"
+MODEL_PATH = ROOT_DIR / "data" / "models" / "chessboard_clf_v2.joblib"
 
 
 IMG_SIZE = (64, 64)
 
 def load_images(folder: Path, label: int):
     X, y = [], []
-    for p in folder.glob("*"):
-        if p.suffix.lower() not in [".png", ".jpg", ".jpeg", ".webp", ".bmp"]:
+    valid_exts = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
+
+    for p in folder.rglob("*"):
+        if not p.is_file():
             continue
-        img = Image.open(p).convert("RGB").resize(IMG_SIZE)
-        arr = np.array(img).astype(np.float32) / 255.0
-        X.append(arr.flatten())
-        y.append(label)
+        if p.suffix.lower() not in valid_exts:
+            continue
+
+        try:
+            if not p.exists():
+                print(f"[WARN] Dosya yok, atlandı: {p}")
+                continue
+
+            img = Image.open(p).convert("RGB").resize(IMG_SIZE)
+            arr = np.array(img).astype(np.float32) / 255.0
+            X.append(arr.flatten())
+            y.append(label)
+
+        except Exception as e:
+            print(f"[WARN] Okunamadı: {p.name} -> {e}")
+
     return X, y
 
 def main():
