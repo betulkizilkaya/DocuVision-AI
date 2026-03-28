@@ -1,60 +1,69 @@
-import sqlite3, io
+import io
 from pathlib import Path
+
 from PIL import Image
-from app.core.paths import ROOT_DIR, DB_PATH
+
+from app.core.db import create_connection
+from app.core.paths import ROOT_DIR
+
 
 OUT_DIR = ROOT_DIR / "temp" / "chessboard_exports"
 OUT_CHESS = OUT_DIR / "chessboard"
 OUT_NOT = OUT_DIR / "not_chessboard"
 
+LIMIT = None  #200 yazarsak ilk 200 kaydı export eder.
 
-LIMIT = None  # hepsi için None, denemek için 200 gibi sayı yazabilirsin
 
 def main():
     OUT_CHESS.mkdir(parents=True, exist_ok=True)
     OUT_NOT.mkdir(parents=True, exist_ok=True)
 
-    con = sqlite3.connect(str(DB_PATH))
-    cur = con.cursor()
+    conn = create_connection()
+    cur = conn.cursor()
 
-    # Sadece sınıflandırılmış olanları al (NULL olmayanlar)
-    q = """
-    SELECT image_id, is_chessboard, chessboard_score
-    FROM image_features
-    WHERE is_chessboard IS NOT NULL
+    query = """
+        SELECT f.image_id, f.is_chessboard, f.chessboard_score, p.blob
+        FROM image_features f
+        INNER JOIN pdf_images p ON p.id = f.image_id
+        WHERE f.is_chessboard IS NOT NULL
     """
-    if LIMIT:
-        q += f" LIMIT {int(LIMIT)}"
+    if LIMIT is not None:
+        query += f" LIMIT {int(LIMIT)}"
 
-    cur.execute(q)
+    cur.execute(query)
     rows = cur.fetchall()
-    print(f"[INFO] Export edilecek kayıt: {len(rows)}")
+    print(f"[INFO] Export edilecek kayıt sayısı: {len(rows)}")
 
-    for image_id, is_cb, score in rows:
-        cur.execute("SELECT blob FROM pdf_images WHERE id=?", (image_id,))
-        r = cur.fetchone()
-        if not r:
-            continue
-        blob = r[0]
+    saved = 0
+    failed = 0
+
+    for row in rows:
+        image_id, is_cb, score, blob = row
 
         try:
             img = Image.open(io.BytesIO(blob))
             img.load()
         except Exception as e:
+            failed += 1
             print(f"[WARN] image_id={image_id} açılamadı: {e}")
             continue
 
-        score_str = "NA" if score is None else f"{float(score):.2f}"
-        fname = f"id{image_id}_score{score_str}.png"
+        score_str = "NA" if score is None else f"{float(score):.4f}"
+        filename = f"id{image_id}_score{score_str}.png"
 
-        out_path = (OUT_CHESS if int(is_cb) == 1 else OUT_NOT) / fname
+        out_path = (OUT_CHESS if int(is_cb) == 1 else OUT_NOT) / filename
+
         try:
             img.save(out_path)
+            saved += 1
         except Exception as e:
+            failed += 1
             print(f"[WARN] image_id={image_id} kaydedilemedi: {e}")
 
-    con.close()
-    print(f"[OK] Bitti. Klasör: {OUT_DIR}")
+    conn.close()
+    print(f"[OK] Export tamamlandı | saved={saved} | failed={failed}")
+    print(f"[DIR] {OUT_DIR}")
+
 
 if __name__ == "__main__":
     main()

@@ -1,6 +1,6 @@
 # app/core/pipeline.py
 from __future__ import annotations
-
+from app.script import compute_chessboard_flags_cnn as compute_chessboard_flags
 import sys
 from pathlib import Path
 import traceback
