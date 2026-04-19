@@ -26,10 +26,15 @@ def preprocess_for_ocr(img_bgr: np.ndarray) -> np.ndarray:
     # blur
     gray = cv2.GaussianBlur(gray, (3, 3), 0)
 
-    # threshold
     _, th = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
+def preprocess_for_ocr(img_bgr: np.ndarray) -> np.ndarray:
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    gray = cv2.resize(gray, None, fx=3.0, fy=3.0, interpolation=cv2.INTER_CUBIC)
+    gray = cv2.medianBlur(gray, 3)
+    th = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
     return th
+
 
 def run_tesseract_ocr(img: np.ndarray) -> str:
     config = "--oem 3 --psm 6 -c tessedit_char_whitelist=KQRBNOabcdefgh12345678x0-+#.= "
@@ -325,29 +330,34 @@ def clean_move_line(text: str) -> str:
         flags=re.I
     )
 
+    text = re.sub(r"\b[a-z]{3,}\b", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text
 
 def repair_move_token(token: str) -> str:
     token = token.strip()
 
+    # küçük harfe çevir (pawn)
     token = token.replace("E", "e")
+
+    # OCR taş hataları
     token = token.replace("W", "N")
     token = token.replace("8", "B")
 
+    # geçersiz karakterleri sil
     token = re.sub(r"[^KQRBNa-hx1-8+#=]", "", token)
 
-    # fazla rakamı temizle
-    token = re.sub(r"([a-h][1-8])[1-8]+", r"\1", token)
-
+    # eğer pawn capture ise (exd5 gibi)
     if re.match(r"^[a-h]x[a-h][1-8]", token):
         return token
 
+    # eğer kare varsa ama başında taş yoksa
     if re.match(r"^[a-h][1-8]", token):
         return token
 
+    # eğer sadece xh2 gibi geldiyse → pawn kabul et
     if re.match(r"^x[a-h][1-8]", token):
-        return "e" + token
+        return "e" + token  # exh2
 
     return token
 
@@ -412,10 +422,10 @@ def keep_chess_chars(text: str) -> str:
 def clean_line_prefix(text: str) -> str:
     text = text.strip()
 
-    # baştaki B271..., B331..., 827 -1... gibi şeyler
-    text = re.sub(r"^[A-Z]?\d+(?:\.\.\.)?", "", text)
-    text = re.sub(r"^\d+\s*[-=]\s*", "", text)
     text = re.sub(r"^[A-Za-z]+\d+\.*", "", text)
+    text = re.sub(r"^[A-Z]\d+\.*", "", text)
+    text = re.sub(r"^\d+\s*[-=]\s*", "", text)
+    text = re.sub(r"^-?\d+\.", "", text)
 
     return text.strip()
 
@@ -443,12 +453,72 @@ def remove_noise_words(text: str) -> str:
 
     return " ".join(clean)
 
+
+def segment_line_tokens(line_img: np.ndarray) -> list[np.ndarray]:
+    gray = cv2.cvtColor(line_img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.resize(gray, None, fx=3.0, fy=3.0, interpolation=cv2.INTER_CUBIC)
+
+    _, th = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+
+    # karakterleri değil, yakın karakter gruplarını birleştir
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (18, 3))
+    merged = cv2.dilate(th, kernel, iterations=1)
+
+    contours, _ = cv2.findContours(merged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    boxes = []
+    h, w = th.shape
+
+    for cnt in contours:
+        x, y, cw, ch = cv2.boundingRect(cnt)
+
+        if cw < 20 or ch < 12:
+            continue
+        if cw * ch < 250:
+            continue
+
+        boxes.append((x, y, cw, ch))
+
+    boxes = sorted(boxes, key=lambda b: b[0])
+
+    tokens = []
+    for x, y, cw, ch in boxes:
+        pad = 3
+        x1 = max(0, x - pad)
+        y1 = max(0, y - pad)
+        x2 = min(w, x + cw + pad)
+        y2 = min(h, y + ch + pad)
+
+        crop = line_img[y1:y2, x1:x2]
+        if crop is None or crop.size == 0:
+            continue
+
+        tokens.append(crop)
+
+    return tokens
+
+def ocr_token_components(token_imgs: list[np.ndarray]) -> str:
+    parts = []
+
+    for tok in token_imgs:
+        if tok is None or tok.size == 0:
+            continue
+
+        prep = preprocess_for_ocr(tok)
+        text = run_tesseract_ocr(prep)
+        text = normalize_ocr_text(text)
+        text = clean_line_prefix(text)
+        text = fix_ocr_chess_errors(text)
+        text = clean_move_line(text)
+        text = keep_chess_chars(text)
+        text = text.strip()
+
+        if text:
+            parts.append(text)
+
+    return " ".join(parts)
+
 def collapse_bad_square_numbers(text: str) -> str:
-    # kare sonunda fazla sayı varsa tek kareye indir
     text = re.sub(r"([a-h][1-8])[1-8]+", r"\1", text)
-
-    # taşlı hamlelerde de uygula
     text = re.sub(r"([KQRBN]?[a-h]?x?[a-h][1-8])[1-8]+", r"\1", text)
-
     return text
-
