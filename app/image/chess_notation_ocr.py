@@ -31,9 +31,8 @@ def preprocess_for_ocr(img_bgr: np.ndarray) -> np.ndarray:
 
     return th
 
-
 def run_tesseract_ocr(img: np.ndarray) -> str:
-    config = "--oem 3 --psm 6 -c tessedit_char_whitelist=KQRBNabcdefgh12345678x+#.= "
+    config = "--oem 3 --psm 6 -c tessedit_char_whitelist=KQRBNOabcdefgh12345678x0-+#.= "
     return pytesseract.image_to_string(img, config=config) or ""
 
 def normalize_ocr_text(text: str) -> str:
@@ -443,76 +442,6 @@ def remove_noise_words(text: str) -> str:
         clean.append(w)
 
     return " ".join(clean)
-
-
-def segment_line_tokens(line_img: np.ndarray) -> list[np.ndarray]:
-    gray = cv2.cvtColor(line_img, cv2.COLOR_BGR2GRAY)
-    gray = cv2.resize(gray, None, fx=3.0, fy=3.0, interpolation=cv2.INTER_CUBIC)
-
-    _, th = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-
-    # karakterleri değil, yakın karakter gruplarını birleştir
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (18, 3))
-    merged = cv2.dilate(th, kernel, iterations=1)
-
-    contours, _ = cv2.findContours(merged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    boxes = []
-    h, w = th.shape
-
-    for cnt in contours:
-        x, y, cw, ch = cv2.boundingRect(cnt)
-
-        if cw < 20 or ch < 12:
-            continue
-        if cw * ch < 250:
-            continue
-
-        boxes.append((x, y, cw, ch))
-
-    boxes = sorted(boxes, key=lambda b: b[0])
-
-    tokens = []
-    for x, y, cw, ch in boxes:
-        pad = 3
-        x1 = max(0, x - pad)
-        y1 = max(0, y - pad)
-        x2 = min(w, x + cw + pad)
-        y2 = min(h, y + ch + pad)
-
-        crop = line_img[y1:y2, x1:x2]
-        if crop is None or crop.size == 0:
-            continue
-
-        tokens.append(crop)
-
-    return tokens
-
-def ocr_token_components(token_imgs: list[np.ndarray]) -> str:
-    parts = []
-
-    for tok in token_imgs:
-        if tok is None or tok.size == 0:
-            continue
-
-        if tok.shape[0] < 5 or tok.shape[1] < 5:
-            continue
-
-        prep = preprocess_for_ocr(tok)
-        text = run_tesseract_ocr(prep)
-        text = normalize_ocr_text(text)
-        text = clean_line_prefix(text)
-        text = fix_ocr_chess_errors(text)
-        text = fix_ocr_chess_errors(text)
-        text = collapse_bad_square_numbers(text)
-        text = clean_move_line(text)
-        text = keep_chess_chars(text)
-        text = text.strip()
-
-        if text:
-            parts.append(text)
-
-    return " ".join(parts)
 
 def collapse_bad_square_numbers(text: str) -> str:
     # kare sonunda fazla sayı varsa tek kareye indir
