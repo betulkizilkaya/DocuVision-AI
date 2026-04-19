@@ -451,3 +451,4 @@ def collapse_bad_square_numbers(text: str) -> str:
     text = re.sub(r"([KQRBN]?[a-h]?x?[a-h][1-8])[1-8]+", r"\1", text)
 
     return text
+
