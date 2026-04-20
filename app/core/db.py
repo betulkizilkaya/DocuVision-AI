@@ -172,33 +172,13 @@ def create_tables(conn: sqlite3.Connection) -> None:
         
         CREATE TABLE IF NOT EXISTS notation_ocr (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            image_id INTEGER NOT NULL,
+            image_id INTEGER NOT NULL UNIQUE,
             roi_type TEXT,
             raw_text TEXT,
             normalized_text TEXT,
             filtered_text TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        
-        CREATE TABLE IF NOT EXISTS notation_moves (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            image_id INTEGER NOT NULL,
-            move_index INTEGER,
-            raw_token TEXT,
-            normalized_token TEXT,
-            is_regex_match INTEGER DEFAULT 0,
-            is_valid_san INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        
-        CREATE TABLE IF NOT EXISTS notation_summary (
-            image_id INTEGER PRIMARY KEY,
-            raw_text_length INTEGER DEFAULT 0,
-            move_count INTEGER DEFAULT 0,
-            valid_move_count INTEGER DEFAULT 0,
-            san_ratio REAL DEFAULT 0.0,
-            final_label TEXT,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (image_id) REFERENCES pdf_images(id)
         );
 
         -- -------------------------
