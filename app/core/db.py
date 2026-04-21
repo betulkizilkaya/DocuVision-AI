@@ -169,6 +169,17 @@ def create_tables(conn: sqlite3.Connection) -> None:
             text_raw TEXT,
             FOREIGN KEY(image_id) REFERENCES pdf_images(id)
         );
+        
+        CREATE TABLE IF NOT EXISTS notation_ocr (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            image_id INTEGER NOT NULL UNIQUE,
+            roi_type TEXT,
+            raw_text TEXT,
+            normalized_text TEXT,
+            filtered_text TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (image_id) REFERENCES pdf_images(id)
+        );
 
         -- -------------------------
         -- ENTITIES
