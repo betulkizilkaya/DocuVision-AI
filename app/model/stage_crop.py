@@ -428,7 +428,7 @@ def fallback_warp_biggest_quad(roi_bgr: np.ndarray, p: HoughParams) -> Optional[
 # -----------------------------
 @dataclass
 class ClfParams:
-    img_size: Tuple[int, int] = (64, 64)
+    img_size: Tuple[int, int] = (128, 128)
     proba_threshold: float = 0.50
 
 
@@ -436,25 +436,26 @@ def extract_features_for_clf(board_bgr: np.ndarray, p: ClfParams) -> np.ndarray:
     rgb = cv2.cvtColor(board_bgr, cv2.COLOR_BGR2RGB)
     img = Image.fromarray(rgb).resize(p.img_size)
     arr = np.array(img).astype(np.float32) / 255.0
-    return arr.flatten().reshape(1, -1)
+    return np.expand_dims(arr, axis=0)   # (1, H, W, 3)
 
 
 def clf_is_chessboard(clf, board_bgr: np.ndarray, p: ClfParams) -> Tuple[bool, float]:
     feat = extract_features_for_clf(board_bgr, p)
 
-    if hasattr(clf, "predict_proba"):
-        probs = clf.predict_proba(feat)[0]
+    out = clf.predict(feat, verbose=0)
 
-        if hasattr(clf, "classes_"):
-            classes = list(clf.classes_)
-            score = float(probs[classes.index(1)])
-        else:
-            score = float(probs[1])
+    # binary sigmoid çıktı: [[0.87]] gibi
+    if len(out.shape) == 2 and out.shape[1] == 1:
+        score = float(out[0][0])
 
-        return (score >= p.proba_threshold), score
+    # iki sınıflı softmax çıktı: [[0.12, 0.88]] gibi
+    elif len(out.shape) == 2 and out.shape[1] >= 2:
+        score = float(out[0][1])
 
-    pred = int(clf.predict(feat)[0])
-    return (pred == 1), float(pred)
+    else:
+        score = float(np.ravel(out)[0])
+
+    return (score >= p.proba_threshold), score
 
 def _box_area(l: int, t: int, r: int, b: int) -> int:
     # r,b inclusive
@@ -547,28 +548,33 @@ def extract_final_boards_from_page(
             continue
 
         # 2) corner yoksa: hough/border/fallback
-        boards: List[np.ndarray] = []
+        boards: List[Tuple[np.ndarray, str]] = []
 
+        # Hough
         warped = warp_by_grid_lines(roi, hough_p)
         if warped is not None:
-            boards.append(warped)
+            boards.append((warped, "hough"))
+
         else:
+            # Border
             border = find_border_rect_in_roi(roi, hough_p)
             if border is not None:
                 l2, t2, r2, b2 = border
                 bgr = roi[t2:b2, l2:r2].copy()
                 bgr = cv2.resize(bgr, (hough_p.out_size, hough_p.out_size), interpolation=cv2.INTER_AREA)
-                boards.append(bgr)
+                boards.append((bgr, "border"))
+
             else:
+                # Fallback
                 fb = fallback_warp_biggest_quad(roi, hough_p)
                 if fb is not None:
                     fb = cv2.resize(fb, (hough_p.out_size, hough_p.out_size), interpolation=cv2.INTER_AREA)
-                    boards.append(fb)
+                    boards.append((fb, "fallback"))
 
         # 3) classifier
-        for bgr in boards:
+        for bgr, method in boards:
             ok, score = clf_is_chessboard(clf, bgr, clf_p)
             if ok:
-                finals.append((bgr, "hough_clf", score))
+                finals.append((bgr, method, score))
 
     return finals
