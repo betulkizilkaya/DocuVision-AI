@@ -224,6 +224,30 @@ def create_tables(conn: sqlite3.Connection) -> None:
     if "chessboard_score" not in cols:
         cursor.execute("ALTER TABLE image_features ADD COLUMN chessboard_score REAL")
 
+    if "has_person" not in cols:
+        cursor.execute("ALTER TABLE image_features ADD COLUMN has_person INTEGER")
+
+    if "person_score" not in cols:
+        cursor.execute("ALTER TABLE image_features ADD COLUMN person_score REAL")
+
+    if "has_logo" not in cols:
+        cursor.execute("ALTER TABLE image_features ADD COLUMN has_logo INTEGER")
+
+    if "logo_score" not in cols:
+        cursor.execute("ALTER TABLE image_features ADD COLUMN logo_score REAL")
+
+    if "has_game_notation" not in cols:
+        cursor.execute("ALTER TABLE image_features ADD COLUMN has_game_notation INTEGER")
+
+    if "game_notation_score" not in cols:
+        cursor.execute("ALTER TABLE image_features ADD COLUMN game_notation_score REAL")
+
+    if "predicted_label" not in cols:
+        cursor.execute("ALTER TABLE image_features ADD COLUMN predicted_label TEXT")
+
+    if "predicted_confidence" not in cols:
+        cursor.execute("ALTER TABLE image_features ADD COLUMN predicted_confidence REAL")
+
     # file_index tablosuna doc_type ekle (yoksa)
     cursor.execute("PRAGMA table_info(file_index)")
     cols = {row[1] for row in cursor.fetchall()}
