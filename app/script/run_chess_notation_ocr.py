@@ -9,7 +9,7 @@ def main():
     image_path = r"C:\Users\betul\OneDrive\Belgeler\GitHub\DocuVision-AI\temp\test_notation.png"
 
     process_single_image(image_id, image_path)
-    print("[OK] OCR + SAN doğrulama tamamlandı.")
+    print("[OK] OCR tamamlandı.")
 
 if __name__ == "__main__":
     main()
