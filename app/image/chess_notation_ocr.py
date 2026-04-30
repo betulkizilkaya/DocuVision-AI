@@ -280,12 +280,25 @@ def is_notation_block(text: str) -> bool:
     return False
 
 def split_columns(img_bgr: np.ndarray) -> list[np.ndarray]:
-    h, w = img_bgr.shape[:2]
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    h, w = gray.shape[:2]
 
-    left = img_bgr[:, : w // 2]
-    right = img_bgr[:, w // 2 :]
+    middle_x1 = int(w * 0.42)
+    middle_x2 = int(w * 0.58)
+    middle_strip = gray[:, middle_x1:middle_x2]
 
-    return [left, right]
+    white_ratio = np.mean(middle_strip > 230)
+    print(f"[INFO] Column white ratio: {white_ratio:.2f}")
+
+    # Bu sayfa tipi için daha esnek eşik
+    if white_ratio > 0.55:
+        left = img_bgr[:, : w // 2]
+        right = img_bgr[:, w // 2 :]
+        print("[INFO] 2 sütun algılandı")
+        return [left, right]
+
+    print("[INFO] Tek sütun algılandı")
+    return [img_bgr]
 
 def extract_notation_lines_from_page(img_bgr: np.ndarray) -> list[str]:
     masked = mask_board_regions(img_bgr)
@@ -305,6 +318,13 @@ def extract_notation_lines_from_page(img_bgr: np.ndarray) -> list[str]:
         print(f"[INFO] Column {col_idx} problem bloğu sayısı: {len(line_imgs)}")
 
         for line_idx, line_img in enumerate(line_imgs):
+            raw_preview = run_tesseract_ocr(preprocess_for_ocr(line_img))
+            preview_text = clean_text(raw_preview)
+
+            # eğer hamle içermiyorsa skip et
+            if not re.search(r"\b1\.?\s*[a-hKQRBN0-9]", preview_text):
+                continue
+
             prep = preprocess_for_ocr(line_img)
 
             # 1) Blok OCR
@@ -312,6 +332,7 @@ def extract_notation_lines_from_page(img_bgr: np.ndarray) -> list[str]:
             text_block = clean_text(raw)
             text_block = remove_header_before_moves(text_block)
             text_block = fix_chess_moves(text_block)
+            text_block = remove_next_problem_tail(text_block)
 
             # 2) Token + model OCR
             text_tokens = reconstruct_block_with_piece_model(
@@ -321,7 +342,12 @@ def extract_notation_lines_from_page(img_bgr: np.ndarray) -> list[str]:
             text_tokens = clean_text(text_tokens)
             text_tokens = remove_header_before_moves(text_tokens)
 
-            text = text_block
+            print(f"MODEL TOKEN OCR {col_idx}-{line_idx:02d}: {text_tokens}")
+
+            if text_tokens and len(text_tokens) > 20 and re.search(r"\b1\.?\s*", text_tokens):
+                text = text_block
+            else:
+                text = text_block
 
             print(f"BLOCK OCR {col_idx}-{line_idx:02d}: {text_block}")
             print(f"TOKEN OCR {col_idx}-{line_idx:02d}: {text_tokens}")
@@ -514,13 +540,34 @@ def clean_token_text(text: str) -> str:
 
 
 def reconstruct_block_with_piece_model(block_img: np.ndarray, block_idx: str = "") -> str:
-    tokens = segment_block_tokens(block_img)
+    # Önce block OCR ile hamle başlangıcı var mı kontrol et
+    prep = preprocess_for_ocr(block_img)
+    raw_block = run_tesseract_ocr(prep)
+    clean_block = clean_text(raw_block)
 
+    # Eğer hamle başlangıcı yoksa token/model çalıştırma
+    if not re.search(r"\b1\.?\s*[a-hKQRBN0-9]", clean_block):
+        return ""
+
+    tokens = segment_block_tokens(block_img)
     out_tokens = []
 
     for tok_idx, tok_img in enumerate(tokens):
         raw_tok = run_tesseract_token_ocr(tok_img)
         tok_text = clean_token_text(raw_tok)
+
+        # Başlık/gürültü tokenlarını at
+        if not tok_text:
+            continue
+
+        if re.search(r"[A-Z]{2,}", tok_text):
+            continue
+
+        if re.search(r"\d{4}", tok_text):
+            continue
+
+        if len(tok_text) > 8:
+            continue
 
         first_char = extract_first_char_for_model(tok_img)
 
@@ -533,10 +580,8 @@ def reconstruct_block_with_piece_model(block_img: np.ndarray, block_idx: str = "
                 first_char,
             )
 
-        # Eğer model B/N/R/Q/K dediyse ve OCR zaten taş harfiyle başlamıyorsa ekle
         if piece in ["B", "N", "R", "Q", "K"]:
             if tok_text and not re.match(r"^[KQRBN]", tok_text):
-                # sadece hamle gibi görünen tokenlara ekle
                 if re.search(r"[a-hx]", tok_text):
                     tok_text = piece + tok_text
 
@@ -575,6 +620,9 @@ def predict_piece_from_crop(img_bgr: np.ndarray) -> str | None:
 def fix_chess_moves(text: str) -> str:
     text = re.sub(r"\b0([1-8])", r"c\1", text)
 
+    text = re.sub(r"\b1\s+4\b", "1. e4", text)
+    text = re.sub(r"\b1\s+e4\b", "1. e4", text)
+
     text = re.sub(r"\bed\b", "exd", text)
     text = re.sub(r"\bde\b", "dxe", text)
 
@@ -582,5 +630,26 @@ def fix_chess_moves(text: str) -> str:
     text = re.sub(r"\b2d3\b", "Nd3", text)
     text = re.sub(r"\b2d\b", "Nd", text)
 
+    text = re.sub(r"\b13(?=\s+[1-8])", "Nf3", text)
+
     text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def extract_move_lines(text: str) -> list[str]:
+    lines = text.split("\n")
+
+    move_lines = []
+
+    for line in lines:
+        # sadece "1. e4" gibi başlayan satırlar
+        if re.search(r"\b1\.\s*[a-hKQRNB]", line):
+            move_lines.append(line)
+
+    return move_lines
+
+def remove_next_problem_tail(text: str) -> str:
+    m = re.search(r"\s\d{3,4}\.\s", text)
+    if m:
+        return text[:m.start()].strip()
     return text
