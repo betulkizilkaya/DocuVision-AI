@@ -59,16 +59,13 @@ def detect_board_regions(img_bgr: np.ndarray) -> list[tuple[int, int, int, int]]
         area = bw * bh
         ratio = bw / max(bh, 1)
 
-        if area < 4000:
+        if area < 2000:
             continue
 
-        if not (0.75 <= ratio <= 1.25):
+        if not (0.6 <= ratio <= 1.4):
             continue
 
-        if bw < 60 or bh < 60:
-            continue
-
-        if bw > w * 0.6 or bh > h * 0.6:
+        if bw < 40 or bh < 40:
             continue
 
         boxes.append((x, y, bw, bh))
