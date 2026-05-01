@@ -5,7 +5,7 @@ import re
 import sqlite3
 from pathlib import Path
 import joblib
-from PIL import Image
+import chess
 
 import cv2
 import numpy as np
@@ -179,8 +179,8 @@ def normalize_ocr_text(text: str) -> str:
     text = text.replace("o-o", "O-O")
 
     text = text.replace("|", "1")
-    text = text.replace("l", "1")
-    text = text.replace("I", "1")
+    text = re.sub(r"\b[lI]\b", "1", text)
+
     text = text.replace("—", "-")
     text = text.replace("–", "-")
 
@@ -196,12 +196,11 @@ def fix_common_ocr_confusions(text: str) -> str:
 
     return text
 
-
 def keep_notation_text(text: str) -> str:
-    text = re.sub(r"[^KQRBNa-hxO0-9\.\-\+#=:/ ]", " ", text)
+    # Satranç notasyonu için gerekli karakterleri koru
+    text = re.sub(r"[^KQRBNOa-hx0-9\.\-\+#=:/ ]", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text
-
 
 def normalize_move_numbers(text: str) -> str:
     text = re.sub(r"(\d+)\.([KQRBNa-hO])", r"\1. \2", text)
@@ -309,7 +308,7 @@ def extract_notation_lines_from_page(img_bgr: np.ndarray) -> list[str]:
 
     columns = split_columns(main_area)
 
-    all_lines: list[str] = []
+    candidates: list[tuple[int, str]] = []
 
     for col_idx, col_img in enumerate(columns):
         cv2.imwrite(str(temp_dir / f"debug_col_{col_idx}.png"), col_img)
@@ -325,29 +324,22 @@ def extract_notation_lines_from_page(img_bgr: np.ndarray) -> list[str]:
             if not re.search(r"\b1\.?\s*[a-hKQRBN0-9]", preview_text):
                 continue
 
-            prep = preprocess_for_ocr(line_img)
+            move_img = line_img
+            cv2.imwrite(str(temp_dir / f"col{col_idx}_block{line_idx:02d}_move_area.png"), move_img)
+
+            prep = preprocess_for_ocr(move_img)
 
             # 1) Blok OCR
             raw = run_tesseract_ocr(prep)
             text_block = clean_text(raw)
             text_block = remove_header_before_moves(text_block)
             text_block = fix_chess_moves(text_block)
+            #text_block = validate_and_fix_moves(text_block)
             text_block = remove_next_problem_tail(text_block)
 
-            # 2) Token + model OCR
-            text_tokens = reconstruct_block_with_piece_model(
-                line_img,
-                block_idx=f"c{col_idx}_b{line_idx}"
-            )
-            text_tokens = clean_text(text_tokens)
-            text_tokens = remove_header_before_moves(text_tokens)
-
-            print(f"MODEL TOKEN OCR {col_idx}-{line_idx:02d}: {text_tokens}")
-
-            if text_tokens and len(text_tokens) > 20 and re.search(r"\b1\.?\s*", text_tokens):
-                text = text_block
-            else:
-                text = text_block
+            # 2) Şimdilik token/model OCR kapalı
+            text_tokens = ""
+            text = text_block
 
             print(f"BLOCK OCR {col_idx}-{line_idx:02d}: {text_block}")
             print(f"TOKEN OCR {col_idx}-{line_idx:02d}: {text_tokens}")
@@ -357,9 +349,23 @@ def extract_notation_lines_from_page(img_bgr: np.ndarray) -> list[str]:
             cv2.imwrite(str(temp_dir / f"col{col_idx}_block{line_idx:02d}_prep.png"), prep)
 
             if is_notation_block(text):
-                all_lines.append(text)
+                s1 = score_notation_text(text)
+                s2 = score_with_chess_engine(text)
 
-    return all_lines
+                s = s1 + (s2 * 5)
+                print(f"SCORE     {col_idx}-{line_idx:02d}: {s}")
+
+                # çok bozuk OCR bloklarını ele
+                if s >= 70:
+                    candidates.append((s, text))
+
+    if candidates:
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        best_score, best_text = candidates[0]
+        print(f"[BEST] score={best_score}: {best_text}")
+        return [best_text]
+
+    return []
 
 
 def save_notation_text_result(
@@ -618,19 +624,65 @@ def predict_piece_from_crop(img_bgr: np.ndarray) -> str | None:
     return None
 
 def fix_chess_moves(text: str) -> str:
-    text = re.sub(r"\b0([1-8])", r"c\1", text)
+    # Eksik nokta/düzensiz hamle numarası düzeltmeleri
+    text = re.sub(r"\b(\d{1,2})\s+([KQRBN]?[a-h]?[x]?[a-h][1-8])\b", r"\1. \2", text)
 
+    # Sık görülen taş harfi düşmeleri
+    text = re.sub(r"\b2d3\b", "Bd3", text)
+    text = re.sub(r"\b2d\b", "Nd", text)
+    text = re.sub(r"\b2e7\b", "Ne7", text)
+    text = re.sub(r"\b2b7\b", "Nb7", text)
+
+    # c6 bazen sadece 6 okunuyor; sadece 1. e4 sonrası düzelt
+    text = re.sub(r"\b1\. e4 6\b", "1. e4 c6", text)
+
+    # dxe4 parçalanınca
+    text = text.replace("dxe 4", "dxe4")
+    text = text.replace("dxe 4.", "dxe4")
+    text = text.replace("ded4", "dxe4")
+
+    text = re.sub(r"\s+", " ", text).strip()
+
+    # Başlangıç hamlesi
     text = re.sub(r"\b1\s+4\b", "1. e4", text)
     text = re.sub(r"\b1\s+e4\b", "1. e4", text)
+    text = re.sub(r"\b1e4\b", "1. e4", text)
 
+    # Hamle numarası boşluk/nokta düzeltme
+    text = re.sub(r"\b(\d{1,2})\.([KQRBNOa-h])", r"\1. \2", text)
+    text = re.sub(r"\b(\d{1,2})\s+([a-h][1-8])\b", r"\1. \2", text)
+
+    # c6 OCR'da 06 geliyor
+    text = re.sub(r"\b06\b", "c6", text)
+
+    # Tek haneli/yarım piyon hamlelerini çok sınırlı düzelt
+    text = re.sub(r"\bd\b(?=\s+\d+\.)", "d5", text)
+    text = re.sub(r"\bg\b(?=\s+\d+\.)", "g6", text)
+
+    # 23 -> Nc3 ama hamle numarası 23 olmasın
+    text = re.sub(r"(?<![\d.])\b23\b(?!\.)", "Nc3", text)
+
+    # Rok
+    text = re.sub(r"\b0-0-0\b", "O-O-O", text)
+    text = re.sub(r"\b0-0\b", "O-O", text)
+    text = re.sub(r"\bo-o-o\b", "O-O-O", text, flags=re.I)
+    text = re.sub(r"\bo-o\b", "O-O", text, flags=re.I)
+
+    # Capture bozulmaları
     text = re.sub(r"\bed\b", "exd", text)
     text = re.sub(r"\bde\b", "dxe", text)
+    text = re.sub(r"\bded\b", "dxe", text)
 
-    text = re.sub(r"\b23\b", "Nc3", text)
-    text = re.sub(r"\b2d3\b", "Nd3", text)
-    text = re.sub(r"\b2d\b", "Nd", text)
+    # Qe6+- -> Qe6+
+    text = re.sub(
+        r"([KQRBN]?[a-h]?[x]?[a-h][1-8](?:=[QRBN])?)[+][\-]+",
+        r"\1+",
+        text
+    )
 
-    text = re.sub(r"\b13(?=\s+[1-8])", "Nf3", text)
+    # Sonuç düzeltme
+    text = text.replace("1:0", "1-0")
+    text = text.replace("0:1", "0-1")
 
     text = re.sub(r"\s+", " ", text).strip()
     return text
@@ -653,3 +705,48 @@ def remove_next_problem_tail(text: str) -> str:
     if m:
         return text[:m.start()].strip()
     return text
+
+
+def score_notation_text(text: str) -> int:
+    score = 0
+
+    # düzgün hamle numaraları
+    score += len(re.findall(r"\b\d{1,2}\.", text)) * 3
+
+    # düzgün kareler
+    score += len(re.findall(r"[a-h][1-8]", text)) * 2
+
+    # taşlı hamleler
+    score += len(re.findall(r"\b[KQRBN][a-hx]?[a-h][1-8]", text)) * 3
+
+    # rok
+    score += len(re.findall(r"O-O(?:-O)?", text)) * 3
+
+    # sonuç
+    score += len(re.findall(r"\b(?:1-0|0-1|1/2-1/2)\b", text)) * 2
+
+    # gürültü cezaları
+    score -= len(re.findall(r"\b[ae]{2,}\b", text)) * 4
+    score -= len(re.findall(r"\b[a-h]\b", text)) * 2
+    score -= len(re.findall(r"\b\d\b", text)) * 2
+
+    return score
+
+def score_with_chess_engine(text: str) -> int:
+    board = chess.Board()
+    tokens = text.split()
+
+    legal_count = 0
+
+    for tok in tokens:
+        if re.match(r"\d+\.", tok):
+            continue
+
+        try:
+            move = board.parse_san(tok)
+            board.push(move)
+            legal_count += 1
+        except:
+            continue
+
+    return legal_count
