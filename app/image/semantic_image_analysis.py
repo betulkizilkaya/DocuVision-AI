@@ -4,7 +4,12 @@ import re
 import csv
 import cv2
 import numpy as np
-import chess
+import tempfile
+import os
+
+import shutil
+
+from app.image.chess_notation_ocr import process_single_image
 
 from PIL import Image
 from pathlib import Path
@@ -36,7 +41,6 @@ PERSON_DOMINANCE_MIN_SCORE = 0.55
 
 LOGO_DOMINANCE_MIN_SCORE = 0.68
 LOGO_DOMINANCE_MIN_AREA = 0.015
-LOGO_DOMINANCE_MAX_AREA = 0.22
 
 TEXT_HEAVY_THRESHOLD = 80
 
@@ -295,7 +299,6 @@ def detect_logo_heuristic(img, ocr_text="", person=0, p_score=0.0):
         component_count = len(component_areas)
         aspect = w / float(h) if h > 0 else 1.0
 
-        # Base score
         score = 0.0
 
         if 0.01 < edge_ratio < 0.12:
@@ -331,7 +334,6 @@ def detect_logo_heuristic(img, ocr_text="", person=0, p_score=0.0):
         if 0.6 <= aspect <= 3.2:
             score += 0.05
 
-        # Penalties
         cleaned_text = re.sub(r"\s+", " ", ocr_text).strip()
         text_len = len(cleaned_text)
         text_density = estimate_text_density(cleaned_text)
@@ -380,97 +382,78 @@ def detect_logo_heuristic(img, ocr_text="", person=0, p_score=0.0):
 
 
 # ---------------------------
-# GAME NOTATION
+# GAME NOTATION (FRIEND OCR PIPELINE)
 # ---------------------------
-def detect_game_notation(conn, image_id):
+def get_notation_ocr_text(conn, image_id):
     try:
-        text = get_ocr_text(conn, image_id)
+        cur = conn.cursor()
+        row = cur.execute("""
+            SELECT normalized_text
+            FROM notation_ocr
+            WHERE image_id = ?
+        """, (image_id,)).fetchone()
 
-        if not text:
-            return 0, 0.0
+        if not row or not row[0]:
+            return ""
 
-        text = normalize_chess_ocr(text)
-
-        tokens = chess_pattern.findall(text)
-        if not tokens:
-            return 0, 0.0
-
-        move_numbers = 0
-        san_like_moves = 0
-        valid_san_parses = 0
-
-        # 1) Güçlü yüzey sinyalleri
-        for token in tokens:
-            token = token.strip()
-
-            if re.fullmatch(r"\d+\.(?:\.\.)?", token):
-                move_numbers += 1
-            else:
-                san_like_moves += 1
-
-        # 2) Tek lineer oyun gibi değil, bağımsız aday hamle olarak doğrula
-        # Her token için başlangıç tahtasında parse denemesi:
-        # Amaç tam oyunu kurmak değil, token'ların gerçekten SAN benzeri olup olmadığını görmek
-        for token in tokens:
-            token = token.strip()
-
-            if re.fullmatch(r"\d+\.(?:\.\.)?", token):
-                continue
-
-            try:
-                board = chess.Board()
-                board.parse_san(token)
-                valid_san_parses += 1
-            except Exception:
-                pass
-
-        total_signal = (
-            move_numbers * 1.0 +
-            san_like_moves * 1.2 +
-            valid_san_parses * 1.5
-        )
-
-        # Satranç dergisi / analiz sayfaları için daha uygun eşik
-        if (move_numbers >= 3 and san_like_moves >= 8) or total_signal >= 18:
-            score = min(1.0, total_signal / 30.0)
-            return 1, round(score, 4)
-
-        return 0, 0.0
+        return row[0].strip()
 
     except Exception as e:
-        print(f"[GAME ERROR] image_id={image_id}, error={e}")
+        print(f"[NOTATION OCR READ ERROR] image_id={image_id}, error={e}")
+        return ""
+
+
+def score_notation_text(text):
+    """
+    Arkadaşının OCR çıktısından,
+    mevcut pipeline'ın beklediği has_game_notation / game_notation_score üretir.
+    """
+    if not text:
         return 0, 0.0
 
-def normalize_chess_ocr(text):
-    replacements = {
-        "0-0-0": "O-O-O",
-        "0-0": "O-O",
-        "o-o-o": "O-O-O",
-        "o-o": "O-O",
-        "×": "x",
-        "–": "-",
-        "—": "-",
-        "♔": "K", "♕": "Q", "♖": "R", "♗": "B", "♘": "N",
-        "♚": "K", "♛": "Q", "♜": "R", "♝": "B", "♞": "N",
-    }
+    text = re.sub(r"\s+", " ", text).strip()
 
-    for old, new in replacements.items():
-        text = text.replace(old, new)
+    move_number_count = len(re.findall(r"\b\d+\.(?:\.\.)?\b", text))
+    san_like_count = len(re.findall(
+        r"\b(?:O-O-O|O-O|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?[+#]?|[a-h][1-8](?:=[QRBN])?[+#]?)\b",
+        text
+    ))
 
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
+    total_signal = move_number_count + san_like_count
+
+    if move_number_count >= 2 and san_like_count >= 4:
+        score = min(1.0, 0.35 + total_signal * 0.06)
+        return 1, round(score, 4)
+
+    if san_like_count >= 6:
+        score = min(1.0, 0.30 + san_like_count * 0.07)
+        return 1, round(score, 4)
+
+    return 0, 0.0
 
 
-chess_pattern = re.compile(
-    r"""
-    (O-O-O|O-O|
-    [KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?[+#]?|
-    [a-h]x[a-h][1-8](?:=[QRBN])?[+#]?|
-    [a-h][1-8](?:=[QRBN])?[+#]?|
-    \d+\.(?:\.\.)?)
-    """,
-    re.VERBOSE
-)
+def detect_game_notation_with_friend_ocr(conn, image_id, pil_img):
+    temp_path = None
+
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+            pil_img.save(tmp.name)
+            temp_path = tmp.name
+
+        process_single_image(image_id, temp_path)
+
+        notation_text = get_notation_ocr_text(conn, image_id)
+        has_game, score = score_notation_text(notation_text)
+
+        return has_game, score
+
+    except Exception as e:
+        print(f"[FRIEND OCR GAME ERROR] image_id={image_id}, error={e}")
+        return 0, 0.0
+
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
 
 
 # ---------------------------
@@ -488,7 +471,6 @@ def is_person_dominant(person, p_score, person_area_ratio, ocr_text):
     if person_area_ratio < PERSON_DOMINANCE_MIN_AREA:
         return False
 
-    # Çok yoğun metin varsa bu genelde afiş/kapak/reklamdır
     if text_len >= TEXT_HEAVY_THRESHOLD:
         return False
 
@@ -501,22 +483,18 @@ def is_logo_dominant(logo, l_score, logo_area_ratio, ocr_text, person, person_ar
     if not logo:
         return False
 
-    # 🔥 FULL LOGO OVERRIDE (EN KRİTİK EKLEME)
     if l_score >= 0.75 and logo_area_ratio >= 0.25:
         return True
 
     if l_score < LOGO_DOMINANCE_MIN_SCORE:
         return False
 
-    # Çok küçük → köşe logosu
     if logo_area_ratio < LOGO_DOMINANCE_MIN_AREA:
         return False
 
-    # 🔥 BU SATIRI YUMUŞATIYORUZ
     if logo_area_ratio > 0.5:
-        return True  # büyükse direkt logo
+        return True
 
-    # Çok yazı → sadece küçük logolarda ceza ver
     if text_len >= TEXT_HEAVY_THRESHOLD and logo_area_ratio < 0.15:
         return False
 
@@ -549,7 +527,6 @@ def choose_label(
     if logo_dom and (l_score > p_score):
         return "logo", round(l_score, 4)
 
-    # Dominant değilse unknown
     return "unknown", 0.0
 
 
@@ -645,13 +622,15 @@ def process_all():
 
                 person, p_score, person_boxes, person_area_ratio = detect_person(img)
                 ocr_text = get_ocr_text(conn, img_id)
+
                 logo, l_score, logo_area_ratio = detect_logo_heuristic(
                     img,
                     ocr_text=ocr_text,
                     person=person,
                     p_score=p_score
                 )
-                game, g_score = detect_game_notation(conn, img_id)
+
+                game, g_score = detect_game_notation_with_friend_ocr(conn, img_id, img)
 
                 label, conf = choose_label(
                     person, p_score,

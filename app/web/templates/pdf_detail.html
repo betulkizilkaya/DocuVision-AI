@@ -2,956 +2,1253 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8" />
-    <title>{{ pdf_name }} | Visual Analysis</title>
+    <title>{{ pdf_name|default('PDF', true) }} | Image Review</title>
 
-    <!-- Fonts + Bootstrap -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
- <style>
-  :root{
-    --pd-card-radius: 16px;
-    --pd-soft-shadow: 0 10px 30px rgba(0,0,0,.08);
-    --pd-soft-shadow-hover: 0 16px 40px rgba(0,0,0,.14);
-    --pd-border: rgba(0,0,0,.08);
-    --pd-glass: rgba(255,255,255,.75);
-    --pd-glass-border: rgba(0,0,0,.12);
-    --pd-muted: #6c757d;
-  }
+    <style>
+        :root{
+            --bg: #f6f7fb;
+            --card: rgba(255,255,255,.95);
+            --border: rgba(16,24,40,.08);
+            --text: #172033;
+            --muted: #667085;
+            --shadow: 0 10px 30px rgba(16,24,40,.08);
+            --shadow-hover: 0 18px 40px rgba(16,24,40,.14);
+            --brand: #6f5cff;
+            --brand-soft: rgba(111,92,255,.10);
+            --success: #15803d;
+            --success-soft: rgba(21,128,61,.10);
+            --warning: #b45309;
+            --warning-soft: rgba(180,83,9,.10);
+            --danger: #b42318;
+            --danger-soft: rgba(180,35,24,.10);
+            --unknown: #475467;
+            --unknown-soft: rgba(71,84,103,.10);
+        }
 
-  body{
-    font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  }
+        body{
+            background: var(--bg);
+            color: var(--text);
+            font-family: "Poppins", system-ui, sans-serif;
+        }
 
-  /* =========================
-     HERO / HEADER (PRO)
-  ========================= */
-  .pd-hero{
-    position: relative;
-    border-radius: 14px;
-    overflow: hidden;
-    padding: 18px 18px;
-    border: 1px solid rgba(0,0,0,.08);
-    background: #ffffff;
-    box-shadow: 0 6px 18px rgba(0,0,0,.06);
-  }
+        body.dark-mode{
+            --bg: #0f1117;
+            --card: rgba(22,25,34,.94);
+            --border: rgba(255,255,255,.08);
+            --text: #f5f7fb;
+            --muted: rgba(255,255,255,.68);
+            --shadow: 0 10px 30px rgba(0,0,0,.25);
+            --shadow-hover: 0 18px 40px rgba(0,0,0,.35);
+            --brand-soft: rgba(111,92,255,.18);
+            --success-soft: rgba(21,128,61,.18);
+            --warning-soft: rgba(180,83,9,.18);
+            --danger-soft: rgba(180,35,24,.18);
+            --unknown-soft: rgba(148,163,184,.16);
+        }
 
-  .pd-hero::after{ content:none; }
+        .review-shell{
+            padding: 28px;
+        }
 
-  .pd-hero::before{
-    content:"";
-    position:absolute;
-    inset:0 0 auto 0;
-    height: 4px;
-    background: linear-gradient(90deg, #178f6a, #1fa37a);
-  }
+        .hero{
+            background: linear-gradient(135deg, rgba(111,92,255,.10), rgba(255,255,255,.70));
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 22px;
+        }
 
-  .pd-hero-title{
-    font-weight: 800;
-    letter-spacing: .1px;
-    margin-top: 6px;
-  }
+        body.dark-mode .hero{
+            background: linear-gradient(135deg, rgba(111,92,255,.16), rgba(22,25,34,.95));
+        }
 
-  .pd-hero-sub{
-    color: rgba(0,0,0,.55);
-    margin-bottom: 0;
-    max-width: 1100px;
-  }
+        .hero-top{
+            display:flex;
+            justify-content: space-between;
+            align-items:center;
+            gap:12px;
+            margin-bottom: 18px;
+        }
 
-  /* =========================
-     METRIC CARDS
-  ========================= */
-  .pd-metric{
-    border: 1px solid var(--pd-border);
-    border-radius: 16px;
-    background: rgba(255,255,255,.92);
-    box-shadow: 0 8px 22px rgba(0,0,0,.06);
-    padding: 14px 14px;
-    height: 100%;
-  }
-  .pd-metric .label{
-    font-size: 12px;
-    color: var(--pd-muted);
-  }
-  .pd-metric .value{
-    font-weight: 800;
-    font-size: 20px;
-    line-height: 1.1;
-  }
+        .hero-title{
+            font-weight: 800;
+            margin: 0;
+            font-size: 28px;
+        }
 
-  /* =========================
-     FILTER PILLS
-  ========================= */
-  .pd-filters .btn{
-    border-radius: 999px;
-    padding: 8px 14px;
-    font-weight: 700;
-  }
+        .hero-sub{
+            margin: 6px 0 0;
+            color: var(--muted);
+            max-width: 920px;
+        }
 
-  /* =========================
-     IMAGE GRID
-  ========================= */
-  .pd-grid{
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 16px;
-  }
-  @media (max-width: 1400px){
-    .pd-grid{ grid-template-columns: repeat(5, 1fr); }
-  }
-  @media (max-width: 1200px){
-    .pd-grid{ grid-template-columns: repeat(4, 1fr); }
-  }
-  @media (max-width: 992px){
-    .pd-grid{ grid-template-columns: repeat(3, 1fr); }
-  }
-  @media (max-width: 576px){
-    .pd-grid{ grid-template-columns: repeat(2, 1fr); }
-  }
+        .theme-wrap{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            white-space: nowrap;
+        }
 
-  /* =========================
-     IMAGE CARD
-  ========================= */
-  .pd-card{
-    position: relative;
-    border-radius: var(--pd-card-radius);
-    overflow: hidden;
-    background: rgba(255,255,255,.96);
-    border: 1px solid var(--pd-border);
-    box-shadow: 0 10px 28px rgba(0,0,0,.07);
-    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-  }
-  .pd-card:hover{
-    transform: translateY(-4px);
-    box-shadow: var(--pd-soft-shadow-hover);
-    border-color: rgba(23,143,106,.28); /* yeşil vurgu */
-  }
+        .theme-wrap .label{
+            color: var(--muted);
+            font-weight: 600;
+            font-size: 14px;
+        }
 
-  .pd-thumb{
-    width: 100%;
-    aspect-ratio: 4/3;
-    object-fit: contain;
-    background: linear-gradient(180deg, rgba(0,0,0,.02), rgba(0,0,0,.04));
-    cursor: zoom-in;
-  }
+        .doc-meta{
+            display:flex;
+            flex-wrap:wrap;
+            gap:10px;
+            margin-top: 18px;
+        }
 
-  /* Status badge */
-  .pd-badge{
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    z-index: 2;
-    border-radius: 999px;
-    padding: 6px 10px;
-    font-size: 12px;
-    font-weight: 800;
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255,255,255,.45);
-    box-shadow: 0 8px 18px rgba(0,0,0,.10);
-  }
-  .pd-badge.ok{
-    background: rgba(25,135,84,.18);
-    color: #0f5132;
-  }
-  .pd-badge.no{
-    background: rgba(220,53,69,.18);
-    color: #842029;
-  }
+        .chip{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.72);
+            border:1px solid var(--border);
+            font-size: 13px;
+            font-weight: 700;
+            box-shadow: 0 4px 16px rgba(16,24,40,.05);
+        }
 
-  .pd-card-body{
-    padding: 12px 12px 14px 12px;
-  }
-  .pd-meta{
-    display:flex;
-    justify-content: space-between;
-    gap: 10px;
-    align-items: flex-start;
-  }
-  .pd-page{
-    font-weight: 800;
-  }
-  .pd-score{
-    font-size: 12px;
-    color: var(--pd-muted);
-  }
+        body.dark-mode .chip{
+            background: rgba(255,255,255,.04);
+        }
 
-  /* =========================
-     FEN / OCR BOX
-  ========================= */
-  .pd-box{
-    margin-top: 10px;
-    border-radius: 14px;
-    padding: 10px;
-    background: var(--pd-glass);
-    border: 1px solid var(--pd-glass-border);
-  }
-  .pd-box .title{
-    display:flex;
-    align-items:center;
-    gap: 8px;
-    font-weight: 800;
-    font-size: 12px;
-    margin-bottom: 6px;
-  }
-  .pd-code{
-    display:block;
-    padding: 10px;
-    border-radius: 12px;
-    background: rgba(248,249,250,.95);
-    border: 1px solid rgba(0,0,0,.08);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-size: 12px;
-    white-space: pre-wrap;
-    word-break: break-word;
-    max-height: 140px;
-    overflow:auto;
-  }
-  .pd-actions{
-    display:flex;
-    gap: 8px;
-    align-items:center;
-    justify-content: space-between;
-    margin-top: 8px;
-  }
-  .pd-muted{
-    color: var(--pd-muted);
-    font-size: 12px;
-  }
+        .chip-success{
+            background: var(--success-soft);
+            color: var(--success);
+            border-color: rgba(21,128,61,.18);
+        }
 
-  /* Pagination */
-  .pagination .page-link{
-    border-radius: 12px;
-    margin: 0 3px;
-  }
+        .chip-warning{
+            background: var(--warning-soft);
+            color: var(--warning);
+            border-color: rgba(180,83,9,.18);
+        }
 
-  /* hero layout */
-.pd-hero-top{
-  display:flex;
-  align-items:center;
-  justify-content: flex-end; /* sola boşluk yok */
-  gap: 12px;
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid rgba(0,0,0,.06);
-}
+        .chip-brand{
+            background: var(--brand-soft);
+            color: var(--brand);
+            border-color: rgba(111,92,255,.2);
+        }
 
+        .chip-muted{
+            background: var(--unknown-soft);
+            color: var(--unknown);
+            border-color: rgba(71,84,103,.16);
+        }
 
-.pd-back{
-  border-radius: 10px;
-}
+        .summary-grid{
+            display:grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap:14px;
+            margin-bottom: 20px;
+        }
 
-.pd-theme{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-}
+        @media (max-width: 1400px){ .summary-grid{ grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 768px){ .summary-grid{ grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 576px){ .summary-grid{ grid-template-columns: 1fr; } }
 
-.pd-theme-label{
-  font-size: 15px;
-  color: rgba(0,0,0,.55);
-  font-weight: 700;
-}
+        .metric{
+            background: var(--card);
+            border:1px solid var(--border);
+            border-radius: 20px;
+            padding: 16px;
+            box-shadow: var(--shadow);
+        }
 
-.pd-hero-main{
-  display:flex;
-  align-items:flex-start;
-  justify-content: space-between;
-  gap: 18px;
-}
+        .metric .k{
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
 
-.pd-hero-left{
-  display:flex;
-  align-items:flex-start;
-  gap: 12px;
-  min-width: 0;
-}
+        .metric .v{
+            font-size: 28px;
+            font-weight: 800;
+            line-height: 1;
+        }
 
-.pd-hero-icon{
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background: rgba(23,143,106,.10);
-  border: 1px solid rgba(23,143,106,.18);
-  color: rgba(15,81,50,1);
-  flex: 0 0 auto;
-  margin-top: 2px;
-}
+        .content-layout{
+            display:grid;
+            grid-template-columns: 280px 1fr;
+            gap:18px;
+            align-items:start;
+        }
 
-.pd-hero-text{
-  min-width: 0;
-}
+        .main-content{
+            min-width:0;
+        }
 
-.pd-hero-file{
-  font-weight: 800;
-  font-size: 16px;
-  color: rgba(0,0,0,.70);
-  overflow:hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 980px;
-}
+        .filter-panel,
+        .search-panel{
+            background: var(--card);
+            border:1px solid var(--border);
+            border-radius: 20px;
+            padding: 16px;
+            box-shadow: var(--shadow);
+        }
 
-.pd-hero-chips{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  margin-top: 4px;
-}
+        .filter-panel{
+            position: sticky;
+            top: 24px;
+        }
 
-.pd-chip{
-  display:inline-flex;
-  align-items:center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  font-weight: 800;
-  font-size: 12px;
-  border: 1px solid rgba(0,0,0,.10);
-  background: rgba(248,249,250,1);
-  color: rgba(0,0,0,.72);
-  white-space: nowrap;
-}
-.pd-chip.green{
-  border-color: rgba(23,143,106,.25);
-  background: rgba(23,143,106,.10);
-  color: rgba(15,81,50,1);
-}
-.pd-chip.red{
-  border-color: rgba(220,53,69,.22);
-  background: rgba(220,53,69,.10);
-  color: rgba(132,32,41,1);
-}
+        .panel-title{
+            font-size: 14px;
+            font-weight: 800;
+            margin-bottom: 14px;
+        }
 
-@media (max-width: 992px){
-  .pd-hero-main{
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .pd-hero-chips{
-    justify-content: flex-start;
-  }
-}
+        .filter-stack{
+            display:flex;
+            flex-direction:column;
+            gap:8px;
+        }
 
-.pd-theme .form-check-input{
-  transform: scale(1.15);   /* %15 daha büyük */
-  cursor: pointer;
-}
+        .filter-btn{
+            width:100%;
+            text-align:left;
+            border-radius: 14px;
+            padding: 10px 12px;
+            font-weight: 700;
+            font-size: 15px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: inherit;
+            transition: .18s ease;
+        }
 
+        .filter-btn:hover,
+        .filter-btn.active{
+            background: var(--brand-soft);
+            border-color: rgba(111,92,255,.25);
+            color: var(--text);
+        }
 
-/* dark mode uyumu */
-body.dark-mode .pd-hero-top{
-  border-bottom-color: rgba(255,255,255,.08);
-}
-body.dark-mode .pd-theme-label{
-  color: rgba(255,255,255,.65);
-}
-body.dark-mode .pd-hero-file{
-  color: rgba(255,255,255,.78);
-}
-body.dark-mode .pd-chip{
-  background: rgba(255,255,255,.06);
-  border-color: rgba(255,255,255,.12);
-  color: rgba(255,255,255,.82);
-}
+        .search-row{
+            display:grid;
+            grid-template-columns: 1.2fr .7fr .8fr auto;
+            gap:10px;
+        }
 
+        @media (max-width: 992px){
+            .content-layout{
+                grid-template-columns: 1fr;
+            }
 
-  /* =========================
-     DARK MODE (PRO)
-  ========================= */
-  body.dark-mode .pd-hero{
-    background: rgba(25,25,28,.92);
-    border-color: rgba(255,255,255,.10);
-    box-shadow: 0 10px 26px rgba(0,0,0,.35);
-  }
-  body.dark-mode .pd-hero-sub{
-    color: rgba(255,255,255,.70);
-  }
+            .filter-panel{
+                position: static;
+            }
 
-  body.dark-mode .pd-metric,
-  body.dark-mode .pd-card{
-    background: rgba(25,25,28,.86);
-    border-color: rgba(255,255,255,.10);
-    color: rgba(255,255,255,.92);
-  }
+            .search-row{
+                grid-template-columns: 1fr;
+            }
+        }
 
-  body.dark-mode .pd-card:hover{
-    border-color: rgba(23,143,106,.35);
-  }
+        .cards-grid{
+            display:grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap:18px;
+            align-items:start;
+        }
 
-  body.dark-mode .pd-score,
-  body.dark-mode .pd-muted{
-    color: rgba(255,255,255,.65);
-  }
+        @media (max-width: 1400px){ .cards-grid{ grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 992px){ .cards-grid{ grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 640px){ .cards-grid{ grid-template-columns: 1fr; } }
 
-  body.dark-mode .pd-box{
-    background: rgba(25,25,28,.72);
-    border-color: rgba(255,255,255,.12);
-  }
+        .image-card{
+            background: var(--card);
+            border:1px solid var(--border);
+            border-radius: 22px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: .2s ease;
+            display:flex;
+            flex-direction:column;
+        }
 
-  body.dark-mode .pd-code{
-    background: rgba(0,0,0,.22);
-    border-color: rgba(255,255,255,.10);
-    color: rgba(255,255,255,.88);
-  }
+        .image-card:hover{
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+        }
 
-  /* Modal image */
-  .pd-modal-img{
-    max-height: 80vh;
-    cursor: grab;
-    user-select: none;
-  }
-</style>
+        .thumb-wrap{
+            position:relative;
+            background: linear-gradient(180deg, rgba(0,0,0,.02), rgba(0,0,0,.05));
+            padding: 12px;
+        }
 
+        .thumb{
+            width:100%;
+            aspect-ratio: 4/3;
+            object-fit: contain;
+            border-radius: 16px;
+            background: rgba(255,255,255,.6);
+            cursor: pointer;
+        }
+
+        .badge-float{
+            position:absolute;
+            top:20px;
+            left:20px;
+            z-index:2;
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 800;
+            border:1px solid transparent;
+            backdrop-filter: blur(10px);
+        }
+
+        .label-person{ background: var(--success-soft); color: var(--success); border-color: rgba(21,128,61,.18); }
+        .label-logo{ background: var(--warning-soft); color: var(--warning); border-color: rgba(180,83,9,.18); }
+        .label-game_notation{ background: var(--brand-soft); color: var(--brand); border-color: rgba(111,92,255,.2); }
+        .label-unknown{ background: var(--unknown-soft); color: var(--unknown); border-color: rgba(71,84,103,.16); }
+
+        .card-body-x{
+            padding: 16px;
+            display:flex;
+            flex-direction:column;
+            gap:14px;
+            flex:1;
+        }
+
+        .card-head{
+            display:flex;
+            align-items:start;
+            justify-content:space-between;
+            gap:10px;
+        }
+
+        .page-title{
+            font-weight: 800;
+            font-size: 17px;
+            margin: 0 0 4px;
+        }
+
+        .subtle{
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .score-pill{
+            padding: 7px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 800;
+            background: rgba(148,163,184,.12);
+            border:1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        .mini-stats{
+            display:grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap:8px;
+        }
+
+        .mini-stat{
+            border:1px solid var(--border);
+            border-radius: 14px;
+            padding: 10px;
+            background: rgba(255,255,255,.4);
+        }
+
+        body.dark-mode .mini-stat{
+            background: rgba(255,255,255,.03);
+        }
+
+        .mini-stat .k{
+            font-size: 11px;
+            color: var(--muted);
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .mini-stat .v{
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .section-box{
+            border:1px solid var(--border);
+            border-radius: 16px;
+            padding: 12px;
+            background: rgba(255,255,255,.42);
+        }
+
+        body.dark-mode .section-box{
+            background: rgba(255,255,255,.03);
+        }
+
+        .section-title{
+            font-size: 12px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            display:flex;
+            align-items:center;
+            gap:8px;
+        }
+
+        .ocr-preview, .explain-preview{
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.55;
+            max-height: 84px;
+            overflow:auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .board-preview-grid{
+            display:grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap:10px;
+        }
+
+        @media (max-width: 640px){
+            .board-preview-grid{
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .board-preview-card{
+            border:1px solid var(--border);
+            border-radius: 14px;
+            padding: 10px;
+            background: rgba(255,255,255,.35);
+        }
+
+        body.dark-mode .board-preview-card{
+            background: rgba(255,255,255,.03);
+        }
+
+        .board-preview-img{
+            width:100%;
+            aspect-ratio: 1/1;
+            object-fit: contain;
+            border-radius: 12px;
+            background: rgba(255,255,255,.5);
+            margin-bottom: 8px;
+        }
+
+        .board-meta{
+            font-size: 11px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .card-actions{
+            display:flex;
+            gap:10px;
+            margin-top:auto;
+        }
+
+        .card-actions .btn{
+            border-radius: 14px;
+            font-weight: 700;
+        }
+
+        .empty-state{
+            padding: 36px;
+            text-align:center;
+            background: var(--card);
+            border:1px solid var(--border);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .modal-content{
+            border-radius: 22px;
+            border:1px solid var(--border);
+            overflow:hidden;
+            background: var(--card);
+        }
+
+        .detail-grid{
+            display:grid;
+            grid-template-columns: 1.1fr .9fr;
+            gap:18px;
+        }
+
+        @media (max-width: 992px){
+            .detail-grid{ grid-template-columns: 1fr; }
+        }
+
+        .detail-image{
+            width:100%;
+            max-height: 72vh;
+            object-fit: contain;
+            border-radius: 18px;
+            background: rgba(0,0,0,.03);
+        }
+
+        .detail-stack{
+            display:flex;
+            flex-direction:column;
+            gap:14px;
+        }
+
+        .kv-grid{
+            display:grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap:10px;
+        }
+
+        .kv{
+            border:1px solid var(--border);
+            border-radius: 14px;
+            padding: 12px;
+        }
+
+        .kv .k{
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .kv .v{
+            font-weight: 800;
+            font-size: 15px;
+        }
+
+        .full-text{
+            font-size: 12px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 220px;
+            overflow:auto;
+            color: var(--muted);
+        }
+
+        .copy-btn{
+            border-radius: 12px;
+            font-weight: 700;
+        }
+
+        .modal-boards-grid{
+            display:grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap:12px;
+        }
+
+        @media (max-width: 640px){
+            .modal-boards-grid{
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .modal-board-card{
+            border:1px solid var(--border);
+            border-radius: 14px;
+            padding: 12px;
+            background: rgba(255,255,255,.35);
+        }
+
+        body.dark-mode .modal-board-card{
+            background: rgba(255,255,255,.03);
+        }
+
+        .modal-board-img{
+            width:100%;
+            aspect-ratio: 1/1;
+            object-fit: contain;
+            border-radius: 12px;
+            background: rgba(255,255,255,.5);
+            margin-bottom: 8px;
+        }
+
+        .fen-box{
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 11px;
+            line-height: 1.5;
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(0,0,0,.04);
+            word-break: break-word;
+            margin-top: 8px;
+        }
+
+        body.dark-mode .fen-box{
+            background: rgba(255,255,255,.05);
+        }
+    </style>
 </head>
-
 <body id="pageBody">
-<div class="container-fluid my-4">
 
-    <!-- HEADER -->
-<section class="pd-hero mb-4">
-  <!-- üst bar -->
-  <div class="pd-hero-top">
+{% set safe_images = images|default([], true) %}
 
-    <div class="pd-theme">
-      <span class="pd-theme-label">Theme</span>
-      <div class="form-check form-switch m-0">
-        <input class="form-check-input" type="checkbox" role="switch" id="checkboxToggle">
-      </div>
-    </div>
-  </div>
+<div class="review-shell container-fluid">
 
-  <!-- ana içerik -->
-  <div class="pd-hero-main">
-    <div class="pd-hero-left">
-      <div class="pd-hero-icon">
-        <i class="bi bi-file-earmark-pdf"></i>
-      </div>
-
-      <div class="pd-hero-text">
-        <h1 class="pd-hero-title mb-1">PDF Detayı</h1>
-        <div class="pd-hero-file" title="{{ pdf_name }}">{{ pdf_name }}</div>
-      </div>
-    </div>
-
-    <div class="pd-hero-chips">
-      <span class="pd-chip">
-        <i class="bi bi-images"></i> Toplam: {{ images|length }}
-      </span>
-      <span class="pd-chip green">
-        <i class="bi bi-check2-circle"></i> Tahta: {{ chess_count|default(0) }}
-      </span>
-      <span class="pd-chip red">
-        <i class="bi bi-x-circle"></i> Diğer: {{ non_chess_count|default(0) }}
-      </span>
-    </div>
-  </div>
-</section>
-
-
-
-    <!-- METRICS (opsiyonel ama görsel olarak “dolu” hissettirir) -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-3 col-sm-6">
-            <div class="pd-metric">
-                <div class="label"><i class="bi bi-collection me-1"></i> Görsel Sayısı</div>
-                <div class="value">{{ images|length }}</div>
+    <section class="hero">
+        <div class="hero-top">
+            <div>
+                <h1 class="hero-title">Visual Evidence Explorer</h1>
+                <p class="hero-sub">
+                    YOLO run çıktıları, OCR metni ve varsa satranç board/FEN bilgileri tek ekranda incelenir.
+                </p>
             </div>
-        </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="pd-metric">
-                <div class="label"><i class="bi bi-grid-3x3-gap me-1"></i> Sayfa Başına Kart</div>
-                <div class="value">24</div>
-            </div>
-        </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="pd-metric">
-                <div class="label"><i class="bi bi-check2-square me-1"></i> Chessboard</div>
-                <div class="value">{{ chess_count|default(0) }}</div>
-            </div>
-        </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="pd-metric">
-                <div class="label"><i class="bi bi-text-paragraph me-1"></i> OCR / Non-chess</div>
-                <div class="value">{{ ocr_non_chess_count|default(0) }}</div>
-            </div>
-        </div>
-    </div>
 
-    <!-- FILTERS -->
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <div class="pd-filters d-flex flex-wrap gap-2">
-            <a href="{{ url_for('pdf_detail', file_id=file_id, filter='all') }}"
-               class="btn btn-sm {% if current_filter == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">
-                <i class="bi bi-layers me-1"></i> Tümü
-            </a>
-
-            <a href="{{ url_for('pdf_detail', file_id=file_id, filter='chessboard') }}"
-               class="btn btn-sm {% if current_filter == 'chessboard' %}btn-success{% else %}btn-outline-success{% endif %}">
-                <i class="bi bi-check2-circle me-1"></i> Satranç Tahtası Olanlar
-            </a>
-
-            <a href="{{ url_for('pdf_detail', file_id=file_id, filter='non_chessboard') }}"
-               class="btn btn-sm {% if current_filter == 'non_chessboard' %}btn-danger{% else %}btn-outline-danger{% endif %}">
-                <i class="bi bi-x-circle me-1"></i> Tahta Olmayanlar
-            </a>
-        </div>
-
-        <div class="d-flex align-items-center gap-2">
-            <span class="text-muted small">Hızlı Git:</span>
-            <input id="pageJump" class="form-control form-control-sm" style="width:140px" placeholder="Sayfa no..." />
-            <button class="btn btn-sm btn-outline-secondary" id="pageJumpBtn" type="button">
-                Git
-            </button>
-        </div>
-    </div>
-
-    <!-- GRID -->
-    <div class="pd-grid" id="imageContainer">
-        {% for image in images %}
-        <div class="pd-card image-card">
-            {% if image.is_chessboard == 1 %}
-                <div class="pd-badge ok">
-                    ✅ TAHTA
+            <div class="theme-wrap">
+                <span class="label">Theme</span>
+                <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" role="switch" id="checkboxToggle">
                 </div>
-            {% else %}
-                <div class="pd-badge no">
-                    ❌ DİĞER
+            </div>
+        </div>
+
+        <div class="doc-meta">
+            <div class="doc-meta">
+    <span class="chip">
+        <i class="bi bi-file-earmark-pdf"></i> {{ pdf_name|default('PDF', true) }}
+    </span>
+
+    {% if total_images > 0 %}
+    <span class="chip chip-success">
+        <i class="bi bi-check-circle"></i> Analiz tamamlandı
+    </span>
+    {% endif %}
+
+    {% if fen_enabled %}
+    <span class="chip chip-brand">
+        <i class="bi bi-grid"></i> FEN aktif
+    </span>
+    {% endif %}
+</div>
+        </div>
+    </section>
+
+    <div class="summary-grid">
+        <div class="metric">
+            <div class="k">Toplam Görsel</div>
+            <div class="v">{{ total_images|default(safe_images|length, true) }}</div>
+        </div>
+        <div class="metric">
+            <div class="k">Person</div>
+            <div class="v">{{ person_count|default(0, true) }}</div>
+        </div>
+        <div class="metric">
+            <div class="k">Logo</div>
+            <div class="v">{{ logo_count|default(0, true) }}</div>
+        </div>
+        <div class="metric">
+            <div class="k">Game Notation</div>
+            <div class="v">{{ game_count|default(0, true) }}</div>
+        </div>
+        <div class="metric">
+            <div class="k">Unknown</div>
+            <div class="v">{{ unknown_count|default(0, true) }}</div>
+        </div>
+        <div class="metric">
+            <div class="k">FEN Modu</div>
+            <div class="v">{% if fen_enabled %}Açık{% else %}Kapalı{% endif %}</div>
+        </div>
+    </div>
+
+    <div class="content-layout">
+        <aside class="filter-panel">
+            <div class="panel-title">Filtreler</div>
+            <div class="filter-stack">
+                <button class="filter-btn active" data-filter="all">Tümü</button>
+                <button class="filter-btn" data-filter="person">Person</button>
+                <button class="filter-btn" data-filter="logo">Logo</button>
+                <button class="filter-btn" data-filter="game_notation">Game Notation</button>
+                <button class="filter-btn" data-filter="unknown">Unknown</button>
+                <button class="filter-btn" data-filter="ocr">OCR Olanlar</button>
+                <button class="filter-btn" data-filter="board">Board Olanlar</button>
+                <button class="filter-btn" data-filter="high">Confidence ≥ 0.70</button>
+            </div>
+        </aside>
+
+        <section class="main-content">
+            <div class="search-panel mb-3">
+                <div class="panel-title">Arama ve Hızlı İnceleme</div>
+                <div class="search-row">
+                    <input id="searchInput" type="text" class="form-control" placeholder="OCR metninde, label'da veya sayfa bilgisinde ara...">
+                    <input id="pageInput" type="number" class="form-control" placeholder="Sayfa no">
+                    <select id="sortSelect" class="form-select">
+                        <option value="default">Varsayılan sıralama</option>
+                        <option value="confidence_desc">Confidence yüksekten düşüğe</option>
+                        <option value="confidence_asc">Confidence düşükten yükseğe</option>
+                        <option value="page_asc">Sayfa artan</option>
+                        <option value="page_desc">Sayfa azalan</option>
+                        <option value="board_desc">Board sayısı yüksekten düşüğe</option>
+                    </select>
+                    <button id="clearSearchBtn" class="btn btn-outline-secondary">Temizle</button>
                 </div>
-            {% endif %}
+            </div>
 
-            <img class="pd-thumb"
-                 src="{{ image.thumbnail_url }}"
-                 alt="Sayfa {{ image.page }}"
-                 data-bs-toggle="modal"
-                 data-bs-target="#imageModal"
-                 data-img-src="{{ image.thumbnail_url }}"
-                 data-page="{{ image.page }}">
+            <div id="cardsGrid" class="cards-grid">
+                {% for image in safe_images %}
+                    {% set label = image.predicted_label|default('unknown', true) %}
+                    {% set confidence = image.predicted_confidence|default(image.score|default(0, true), true) %}
+                    {% set ocr_text = image.ocr_text|default('', true) %}
+                    {% set person_score = image.person_score|default(0, true) %}
+                    {% set logo_score = image.logo_score|default(0, true) %}
+                    {% set game_score = image.game_notation_score|default(0, true) %}
+                    {% set explanation = image.explanation|default('', true) %}
+                    {% set thumb_url = image.thumbnail_url|default('', true) %}
+                    {% set image_page = image.page|default('-', true) %}
+                    {% set image_id = image.id|default(loop.index, true) %}
+                    {% set person_area_ratio = image.person_area_ratio|default('-', true) %}
+                    {% set logo_area_ratio = image.logo_area_ratio|default('-', true) %}
+                    {% set person_box_count = image.person_box_count|default('-', true) %}
+                    {% set boards = image.boards|default([], true) %}
+                    {% set board_count = image.board_count|default(boards|length, true) %}
+                    {% set is_chessboard = image.is_chessboard|default(0, true) %}
+                    {% set chess_score = image.score|default('0.00', true) %}
 
-            <div class="pd-card-body">
-                <div class="pd-meta">
-                    <div>
-                        <div class="pd-page">Sayfa {{ image.page }}</div>
-                        <div class="pd-score">Skor: {{ image.score }}</div>
-                    </div>
-
-                    <div class="text-end">
-                        {% if image.is_chessboard == 1 %}
-                            <span class="badge text-bg-success-subtle border border-success-subtle text-success-emphasis">
-                                chessboard
-                            </span>
+                    {% if not explanation %}
+                        {% if label == 'game_notation' %}
+                            {% set explanation = 'OCR metninde satranç hamlesine benzeyen yapı bulundu. SAN benzeri tokenlar ve oyun yazımı sinyali bu etiketi güçlendirdi.' %}
+                        {% elif label == 'person' %}
+                            {% set explanation = 'Görselde kişi nesnesi tespit edildi. Person score ve kapsama alanı bu sınıfı öne çıkardı.' %}
+                        {% elif label == 'logo' %}
+                            {% set explanation = 'Görselin kompakt, sembolik yapısı ve düşük metin yoğunluğu logo olasılığını artırdı.' %}
                         {% else %}
-                            <span class="badge text-bg-danger-subtle border border-danger-subtle text-danger-emphasis">
-                                non-chess
-                            </span>
+                            {% set explanation = 'Sinyaller baskın bir sınıfa yeterince güçlü şekilde oturmadığı için sonuç unknown olarak bırakıldı.' %}
                         {% endif %}
-                    </div>
-                </div>
+                    {% endif %}
 
-                <!-- FEN (sadece seçili PDF'lerde + chessboard) -->
-                {% if fen_enabled and image.is_chessboard == 1 %}
-                <div class="pd-box">
-                    <div class="title">
-                        <i class="bi bi-diagram-3"></i> FEN
-                    </div>
+                    <article
+                        class="image-card review-card"
+                        data-label="{{ label }}"
+                        data-page="{{ image_page if image_page != '-' else 0 }}"
+                        data-confidence="{{ confidence }}"
+                        data-board-count="{{ board_count }}"
+                        data-ocr="{{ ocr_text|lower }}"
+                        data-search="{{ ((ocr_text ~ ' ' ~ label ~ ' ' ~ image_page) | lower) }}"
+                    >
+                        <div class="thumb-wrap">
+                            <span class="badge-float label-{{ label if label in ['person','logo','game_notation','unknown'] else 'unknown' }}">
+                                {{ label|replace('_', ' ')|title }}
+                            </span>
 
-                    {% if image.fen %}
-                        <code class="pd-code">{{ image.fen }}</code>
-
-                        <div class="pd-actions">
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-secondary"
-                                    data-fen="{{ image.fen|e }}"
-                                    onclick="copyFen(this)">
-                                <i class="bi bi-clipboard me-1"></i> Kopyala
-                            </button>
-
-                            {% if image.fen_created_at %}
-                                <span class="pd-muted">{{ image.fen_created_at }}</span>
+                            {% if thumb_url %}
+                            <img
+                                src="{{ thumb_url }}"
+                                class="thumb"
+                                alt="Sayfa {{ image_page }}"
+                                data-bs-toggle="modal"
+                                data-bs-target="#detailModal"
+                                data-img="{{ thumb_url }}"
+                                data-page="{{ image_page }}"
+                                data-label="{{ label }}"
+                                data-confidence="{{ confidence }}"
+                                data-person="{{ person_score }}"
+                                data-logo="{{ logo_score }}"
+                                data-game="{{ game_score }}"
+                                data-ocr="{{ ocr_text|e }}"
+                                data-explanation="{{ explanation|e }}"
+                                data-person-area="{{ person_area_ratio }}"
+                                data-logo-area="{{ logo_area_ratio }}"
+                                data-box-count="{{ person_box_count }}"
+                                data-boards='{{ boards|tojson|safe }}'
+                                data-board-count="{{ board_count }}"
+                                data-is-chessboard="{{ is_chessboard }}"
+                                data-chess-score="{{ chess_score }}"
+                            >
+                            {% else %}
+                            <div class="thumb d-flex align-items-center justify-content-center text-muted">
+                                Görsel yok
+                            </div>
                             {% endif %}
                         </div>
-                    {% else %}
-                        <div class="pd-muted">Henüz üretilmedi</div>
-                    {% endif %}
-                </div>
-                {% endif %}
 
-                <!-- OCR (satranç olmayan görseller) -->
-                {% if image.is_chessboard != 1 %}
-                <div class="pd-box">
-                    <div class="title">
-                        <i class="bi bi-card-text"></i> OCR
-                    </div>
+                        <div class="card-body-x">
+                            <div class="card-head">
+                                <div>
+                                    <h3 class="page-title">Sayfa {{ image_page }}</h3>
+                                    <div class="subtle">Görsel ID: {{ image_id }}</div>
+                                </div>
+                                <div class="score-pill">Confidence {{ '%.2f'|format(confidence|float) }}</div>
+                            </div>
 
-                    {% if image.ocr_text %}
-                        <code class="pd-code">{{ image.ocr_text }}</code>
-                        <div class="pd-actions">
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-secondary"
-                                    data-ocr="{{ image.ocr_text|e }}"
-                                    onclick="copyOcr(this)">
-                                <i class="bi bi-clipboard me-1"></i> Kopyala
-                            </button>
-                            <span class="pd-muted"> </span>
+                            <div class="mini-stats">
+                                <div class="mini-stat">
+                                    <div class="k">Person Score</div>
+                                    <div class="v">{{ '%.2f'|format(person_score|float) }}</div>
+                                </div>
+                                <div class="mini-stat">
+                                    <div class="k">Logo Score</div>
+                                    <div class="v">{{ '%.2f'|format(logo_score|float) }}</div>
+                                </div>
+                                <div class="mini-stat">
+                                    <div class="k">Game Score</div>
+                                    <div class="v">{{ '%.2f'|format(game_score|float) }}</div>
+                                </div>
+                                <div class="mini-stat">
+                                    <div class="k">Board Count</div>
+                                    <div class="v">{{ board_count }}</div>
+                                </div>
+                            </div>
+
+                            <div class="section-box">
+                                <div class="section-title">
+                                    <i class="bi bi-cpu"></i> YOLO / Karar Özeti
+                                </div>
+
+                                <div class="d-flex flex-wrap gap-2">
+                                    <span class="chip {% if label == 'person' %}chip-success{% elif label == 'logo' %}chip-warning{% elif label == 'game_notation' %}chip-brand{% else %}chip-muted{% endif %}">
+                                        Final: {{ label|replace('_', ' ')|title }}
+                                    </span>
+
+                                    <span class="chip chip-muted">
+                                        Confidence: {{ '%.2f'|format(confidence|float) }}
+                                    </span>
+
+                                    {% if is_chessboard %}
+                                    <span class="chip chip-brand">
+                                        Chessboard score: {{ chess_score }}
+                                    </span>
+                                    {% endif %}
+
+                                    {% if ocr_text %}
+                                    <span class="chip chip-success">
+                                        OCR var
+                                    </span>
+                                    {% endif %}
+
+                                    {% if board_count > 0 %}
+                                    <span class="chip chip-brand">
+                                        {{ board_count }} board preview
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="section-box">
+                                <div class="section-title">
+                                    <i class="bi bi-card-text"></i> OCR Önizleme
+                                </div>
+                                <div class="ocr-preview">
+                                    {% if ocr_text %}
+                                        {{ ocr_text[:220] }}{% if (ocr_text|length) > 220 %}...{% endif %}
+                                    {% else %}
+                                        OCR metni bulunamadı.
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {% if board_count > 0 %}
+                            <div class="section-box">
+                                <div class="section-title">
+                                    <i class="bi bi-grid-3x3-gap"></i> Tespit Edilen Board'lar
+                                </div>
+
+                                <div class="board-preview-grid">
+                                    {% for board in boards[:2] %}
+                                    <div class="board-preview-card">
+                                        {% if board.board_img_b64 %}
+                                        <img
+                                            src="data:image/png;base64,{{ board.board_img_b64 }}"
+                                            alt="Board {{ board.board_index }}"
+                                            class="board-preview-img"
+                                        >
+                                        {% endif %}
+                                        <div class="board-meta">
+                                            <div><strong>Board:</strong> {{ board.board_index }}</div>
+                                            <div><strong>Source:</strong> {{ board.source or '-' }}</div>
+                                            <div><strong>Score:</strong> {{ '%.2f'|format(board.clf_score|float) }}</div>
+                                        </div>
+                                        {% if board.fen %}
+                                        <div class="fen-box">{{ board.fen }}</div>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <div class="section-box">
+                                <div class="section-title">
+                                    <i class="bi bi-stars"></i> Why this result?
+                                </div>
+                                <div class="explain-preview">{{ explanation }}</div>
+                            </div>
+
+                            <div class="card-actions">
+                                {% if thumb_url %}
+                                <button
+                                    class="btn btn-primary flex-fill"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#detailModal"
+                                    data-img="{{ thumb_url }}"
+                                    data-page="{{ image_page }}"
+                                    data-label="{{ label }}"
+                                    data-confidence="{{ confidence }}"
+                                    data-person="{{ person_score }}"
+                                    data-logo="{{ logo_score }}"
+                                    data-game="{{ game_score }}"
+                                    data-ocr="{{ ocr_text|e }}"
+                                    data-explanation="{{ explanation|e }}"
+                                    data-person-area="{{ person_area_ratio }}"
+                                    data-logo-area="{{ logo_area_ratio }}"
+                                    data-box-count="{{ person_box_count }}"
+                                    data-boards='{{ boards|tojson|safe }}'
+                                    data-board-count="{{ board_count }}"
+                                    data-is-chessboard="{{ is_chessboard }}"
+                                    data-chess-score="{{ chess_score }}"
+                                >
+                                    <i class="bi bi-eye me-1"></i> Detayı Aç
+                                </button>
+                                {% else %}
+                                <button class="btn btn-outline-secondary flex-fill" disabled>
+                                    <i class="bi bi-eye-slash me-1"></i> Görsel Yok
+                                </button>
+                                {% endif %}
+                            </div>
                         </div>
-                    {% else %}
-                        <div class="pd-muted">OCR metni yok (NULL)</div>
-                    {% endif %}
-                </div>
-                {% endif %}
+                    </article>
+                {% endfor %}
             </div>
-        </div>
-        {% endfor %}
+
+            <div id="emptyState" class="empty-state {% if safe_images|length > 0 %}d-none{% endif %}">
+                <h4 class="mb-2">Eşleşen kart bulunamadı</h4>
+                <div class="text-muted">Filtreleri veya arama terimini değiştir.</div>
+            </div>
+        </section>
     </div>
-
-    {% if not images %}
-        <div class="alert alert-warning mt-4" role="alert">
-            Bu filtreye uygun görsel bulunamadı veya bu PDF'ten görsel çıkarılmadı.
-        </div>
-    {% endif %}
-
-    <!-- Pagination (client-side) -->
-    {% set per_page = 24 %}
-    {% set total = images|length %}
-    {% set pages = (total // per_page) + (1 if (total % per_page) > 0 else 0) %}
-
-    {% if images and pages > 1 %}
-    <nav aria-label="Image pagination" class="mt-4">
-        <ul class="pagination justify-content-center" id="pagination"></ul>
-    </nav>
-    {% endif %}
-
 </div>
 
-<!-- IMAGE MODAL -->
-<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-xl">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="imageModalLabel">
-            <i class="bi bi-zoom-in me-2"></i> Image Preview
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
+<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <h4 class="mb-1 fw-bold" id="modalTitle">Visual Detail</h4>
+                    <div class="text-muted small">Görsel, OCR ve karar açıklaması birlikte gösterilir.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
 
-      <div class="modal-body text-center position-relative">
-        <button type="button" class="btn btn-secondary position-absolute top-50 start-0 translate-middle-y"
-                id="prevImage" style="z-index:10;">&#10094;</button>
+            <div class="modal-body">
+                <div class="detail-grid">
+                    <div>
+                        <img id="modalImage" class="detail-image" src="" alt="Detail image">
+                    </div>
 
-        <img src="" id="modalImage" class="img-fluid pd-modal-img" alt="Full Image Preview">
+                    <div class="detail-stack">
+                        <div class="kv-grid">
+                            <div class="kv">
+                                <div class="k">Page</div>
+                                <div class="v" id="kvPage">-</div>
+                            </div>
+                            <div class="kv">
+                                <div class="k">Predicted Label</div>
+                                <div class="v" id="kvLabel">-</div>
+                            </div>
+                            <div class="kv">
+                                <div class="k">Confidence</div>
+                                <div class="v" id="kvConfidence">-</div>
+                            </div>
+                            <div class="kv">
+                                <div class="k">Person Boxes</div>
+                                <div class="v" id="kvBoxCount">-</div>
+                            </div>
+                            <div class="kv">
+                                <div class="k">Person Area Ratio</div>
+                                <div class="v" id="kvPersonArea">-</div>
+                            </div>
+                            <div class="kv">
+                                <div class="k">Logo Area Ratio</div>
+                                <div class="v" id="kvLogoArea">-</div>
+                            </div>
+                            <div class="kv">
+                                <div class="k">Person Score</div>
+                                <div class="v" id="kvPerson">-</div>
+                            </div>
+                            <div class="kv">
+                                <div class="k">Logo / Game Score</div>
+                                <div class="v" id="kvLogoGame">-</div>
+                            </div>
+                        </div>
 
-        <button type="button" class="btn btn-secondary position-absolute top-50 end-0 translate-middle-y"
-                id="nextImage" style="z-index:10;">&#10095;</button>
-      </div>
+                        <div class="section-box">
+                            <div class="section-title"><i class="bi bi-stars"></i> Karar Açıklaması</div>
+                            <div class="full-text" id="modalExplanation"></div>
+                        </div>
 
-      <div class="modal-footer d-flex justify-content-between">
-        <div class="small text-muted" id="modalMeta"> </div>
-        <div class="small text-muted">Zoom: mouse wheel, Pan: drag</div>
-      </div>
+                        <div class="section-box">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="section-title mb-0"><i class="bi bi-card-text"></i> OCR Metni</div>
+                                <button class="btn btn-sm btn-outline-secondary copy-btn" id="copyOcrBtn">
+                                    <i class="bi bi-clipboard me-1"></i> Kopyala
+                                </button>
+                            </div>
+                            <div class="full-text" id="modalOcr"></div>
+                        </div>
+
+                        <div class="section-box" id="modalBoardsWrap" style="display:none;">
+                            <div class="section-title"><i class="bi bi-grid-3x3-gap"></i> Board / FEN Çıktıları</div>
+                            <div id="modalBoardsContainer" class="modal-boards-grid"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-{% if fen_enabled %}
 <script>
-async function copyFen(btn) {
-    try {
-        const fen = btn.getAttribute('data-fen') || '';
-        await navigator.clipboard.writeText(fen);
-        const original = btn.innerHTML;
-        btn.innerHTML = '<i class="bi bi-check2 me-1"></i> Kopyalandı';
-        btn.disabled = true;
-        setTimeout(() => { btn.innerHTML = original; btn.disabled = false; }, 900);
-    } catch (e) {
-        alert("Kopyalama başarısız. Tarayıcı izinlerini kontrol et.");
-    }
-}
-</script>
-{% endif %}
-
-<script>
-async function copyOcr(btn) {
-    try {
-        const t = btn.getAttribute('data-ocr') || '';
-        await navigator.clipboard.writeText(t);
-        const original = btn.innerHTML;
-        btn.innerHTML = '<i class="bi bi-check2 me-1"></i> Kopyalandı';
-        btn.disabled = true;
-        setTimeout(() => { btn.innerHTML = original; btn.disabled = false; }, 900);
-    } catch (e) {
-        alert("Kopyalama başarısız. Tarayıcı izinlerini kontrol et.");
-    }
-}
-</script>
-
-<script>
-/* ============================================================
-   THEME TOGGLE (ana sayfandaki localStorage mantığı ile uyumlu)
-============================================================ */
 (function(){
     const body = document.getElementById('pageBody');
     const toggle = document.getElementById('checkboxToggle');
     const storageKey = 'pdf-analysis-theme';
 
-    if (!toggle) return;
-
-    const currentTheme = localStorage.getItem(storageKey);
-    if (currentTheme === 'dark') {
+    const theme = localStorage.getItem(storageKey);
+    if (theme === 'dark') {
         body.classList.add('dark-mode');
-        toggle.checked = true;
-    } else {
-        body.classList.remove('dark-mode');
-        toggle.checked = false;
+        if (toggle) toggle.checked = true;
     }
 
-    toggle.addEventListener('change', function(){
-        if (this.checked) {
-            body.classList.add('dark-mode');
-            localStorage.setItem(storageKey, 'dark');
-        } else {
-            body.classList.remove('dark-mode');
-            localStorage.setItem(storageKey, 'light');
+    if (toggle) {
+        toggle.addEventListener('change', function(){
+            if (this.checked) {
+                body.classList.add('dark-mode');
+                localStorage.setItem(storageKey, 'dark');
+            } else {
+                body.classList.remove('dark-mode');
+                localStorage.setItem(storageKey, 'light');
+            }
+        });
+    }
+})();
+</script>
+
+<script>
+(function(){
+    const cards = Array.from(document.querySelectorAll('.review-card'));
+    const filterButtons = Array.from(document.querySelectorAll('.filter-btn'));
+    const searchInput = document.getElementById('searchInput');
+    const pageInput = document.getElementById('pageInput');
+    const sortSelect = document.getElementById('sortSelect');
+    const clearBtn = document.getElementById('clearSearchBtn');
+    const grid = document.getElementById('cardsGrid');
+    const emptyState = document.getElementById('emptyState');
+
+    let activeFilter = 'all';
+
+    function apply(){
+        const q = (searchInput?.value || '').trim().toLowerCase();
+        const pageValue = (pageInput?.value || '').trim();
+
+        cards.forEach(card => {
+            const label = card.dataset.label || '';
+            const confidence = parseFloat(card.dataset.confidence || '0');
+            const search = card.dataset.search || '';
+            const hasOcr = (card.dataset.ocr || '').trim().length > 0;
+            const page = String(card.dataset.page || '');
+            const boardCount = parseInt(card.dataset.boardCount || '0', 10);
+
+            let visible = true;
+
+            if (activeFilter !== 'all') {
+                if (activeFilter === 'ocr') visible = hasOcr;
+                else if (activeFilter === 'high') visible = confidence >= 0.70;
+                else if (activeFilter === 'board') visible = boardCount > 0;
+                else visible = label === activeFilter;
+            }
+
+            if (visible && q) {
+                visible = search.includes(q);
+            }
+
+            if (visible && pageValue) {
+                visible = page === pageValue;
+            }
+
+            card.classList.toggle('d-none', !visible);
+        });
+
+        const visibleCards = cards.filter(c => !c.classList.contains('d-none'));
+        if (emptyState) {
+            emptyState.classList.toggle('d-none', visibleCards.length !== 0);
         }
+    }
+
+    function sortCards(){
+        const mode = sortSelect?.value || 'default';
+        const sorted = [...cards].sort((a,b) => {
+            const aConf = parseFloat(a.dataset.confidence || '0');
+            const bConf = parseFloat(b.dataset.confidence || '0');
+            const aPage = parseInt(a.dataset.page || '0', 10);
+            const bPage = parseInt(b.dataset.page || '0', 10);
+            const aBoard = parseInt(a.dataset.boardCount || '0', 10);
+            const bBoard = parseInt(b.dataset.boardCount || '0', 10);
+
+            if (mode === 'confidence_desc') return bConf - aConf;
+            if (mode === 'confidence_asc') return aConf - bConf;
+            if (mode === 'page_desc') return bPage - aPage;
+            if (mode === 'page_asc') return aPage - bPage;
+            if (mode === 'board_desc') return bBoard - aBoard;
+            return 0;
+        });
+
+        sorted.forEach(card => grid?.appendChild(card));
+    }
+
+    filterButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            filterButtons.forEach(x => x.classList.remove('active'));
+            btn.classList.add('active');
+            activeFilter = btn.dataset.filter || 'all';
+            apply();
+        });
     });
+
+    searchInput?.addEventListener('input', apply);
+    pageInput?.addEventListener('input', apply);
+    sortSelect?.addEventListener('change', () => {
+        sortCards();
+        apply();
+    });
+
+    clearBtn?.addEventListener('click', () => {
+        if (searchInput) searchInput.value = '';
+        if (pageInput) pageInput.value = '';
+        if (sortSelect) sortSelect.value = 'default';
+        activeFilter = 'all';
+        filterButtons.forEach(x => x.classList.remove('active'));
+        const allBtn = document.querySelector('.filter-btn[data-filter="all"]');
+        if (allBtn) allBtn.classList.add('active');
+        apply();
+    });
+
+    apply();
 })();
 </script>
 
 <script>
-/* ============================================================
-   PAGINATION (client-side)
-============================================================ */
-(function () {
-    const perPage = {{ per_page }};
-    const cards = Array.from(document.querySelectorAll('#imageContainer .image-card'));
-    const total = cards.length;
-    const totalPages = Math.ceil(total / perPage);
-    const pagination = document.getElementById('pagination');
-
-    if (!pagination || totalPages <= 1) {
-        // yine de ilk sayfayı göster
-        cards.forEach(c => c.style.display = 'block');
-        return;
-    }
-
-    function showPage(page) {
-        const start = (page - 1) * perPage;
-        const end = start + perPage;
-
-        cards.forEach((card, idx) => {
-            card.style.display = (idx >= start && idx < end) ? 'block' : 'none';
-        });
-
-        renderPagination(page);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function makeItem(label, page, disabled, active) {
-        const li = document.createElement('li');
-        li.className = 'page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : '');
-
-        const a = document.createElement('a');
-        a.className = 'page-link';
-        a.href = '#';
-        a.textContent = label;
-
-        a.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (!disabled) showPage(page);
-        });
-
-        li.appendChild(a);
-        return li;
-    }
-
-    function renderPagination(current) {
-        pagination.innerHTML = '';
-        pagination.appendChild(makeItem('«', current - 1, current === 1, false));
-
-        const windowSize = 7;
-        let start = Math.max(1, current - Math.floor(windowSize / 2));
-        let end = Math.min(totalPages, start + windowSize - 1);
-        start = Math.max(1, end - windowSize + 1);
-
-        if (start > 1) {
-            pagination.appendChild(makeItem('1', 1, false, current === 1));
-            if (start > 2) {
-                const dots = document.createElement('li');
-                dots.className = 'page-item disabled';
-                dots.innerHTML = '<span class="page-link">…</span>';
-                pagination.appendChild(dots);
-            }
-        }
-
-        for (let p = start; p <= end; p++) {
-            pagination.appendChild(makeItem(String(p), p, false, p === current));
-        }
-
-        if (end < totalPages) {
-            if (end < totalPages - 1) {
-                const dots = document.createElement('li');
-                dots.className = 'page-item disabled';
-                dots.innerHTML = '<span class="page-link">…</span>';
-                pagination.appendChild(dots);
-            }
-            pagination.appendChild(makeItem(String(totalPages), totalPages, false, current === totalPages));
-        }
-
-        pagination.appendChild(makeItem('»', current + 1, current === totalPages, false));
-    }
-
-    showPage(1);
-})();
-</script>
-
-<script>
-/* ============================================================
-   QUICK JUMP: sayfa no gir -> en yakın kartı bulup o kartın olduğu
-   pagination sayfasına geç
-============================================================ */
 (function(){
-    const input = document.getElementById('pageJump');
-    const btn = document.getElementById('pageJumpBtn');
-    const cards = Array.from(document.querySelectorAll('#imageContainer .image-card'));
-    const perPage = {{ per_page }};
+    const detailModal = document.getElementById('detailModal');
+    const modalImage = document.getElementById('modalImage');
+    const kvPage = document.getElementById('kvPage');
+    const kvLabel = document.getElementById('kvLabel');
+    const kvConfidence = document.getElementById('kvConfidence');
+    const kvBoxCount = document.getElementById('kvBoxCount');
+    const kvPersonArea = document.getElementById('kvPersonArea');
+    const kvLogoArea = document.getElementById('kvLogoArea');
+    const kvPerson = document.getElementById('kvPerson');
+    const kvLogoGame = document.getElementById('kvLogoGame');
+    const modalExplanation = document.getElementById('modalExplanation');
+    const modalOcr = document.getElementById('modalOcr');
+    const copyBtn = document.getElementById('copyOcrBtn');
+    const modalBoardsWrap = document.getElementById('modalBoardsWrap');
+    const modalBoardsContainer = document.getElementById('modalBoardsContainer');
 
-    if (!input || !btn || cards.length === 0) return;
+    if (!detailModal) return;
 
-    function go(){
-        const v = (input.value || '').trim();
-        const n = parseInt(v, 10);
-        if (!Number.isFinite(n)) return;
-
-        // kartların içinde data-page'li img var
-        let idx = -1;
-        for (let i=0; i<cards.length; i++){
-            const img = cards[i].querySelector('img[data-page]');
-            const p = img ? parseInt(img.getAttribute('data-page'),10) : NaN;
-            if (p === n) { idx = i; break; }
-        }
-        if (idx === -1) return;
-
-        const page = Math.floor(idx / perPage) + 1;
-
-        // pagination showPage fonksiyonu closure içinde; bu yüzden basit hack:
-        // ilgili sayfa linkini tetikle
-        const pagination = document.getElementById('pagination');
-        if (pagination){
-            const links = Array.from(pagination.querySelectorAll('a.page-link'));
-            const target = links.find(a => a.textContent === String(page));
-            if (target) target.click();
-        }
-
-        // kartı biraz highlight etmek
-        setTimeout(() => {
-            cards[idx].scrollIntoView({behavior:'smooth', block:'center'});
-            cards[idx].style.outline = '3px solid rgba(13,110,253,.45)';
-            cards[idx].style.outlineOffset = '3px';
-            setTimeout(()=> {
-                cards[idx].style.outline = '';
-                cards[idx].style.outlineOffset = '';
-            }, 1200);
-        }, 250);
-    }
-
-    btn.addEventListener('click', go);
-    input.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') go(); });
-})();
-</script>
-
-<script>
-/* ============================================================
-   IMAGE MODAL: click image -> modal + gallery through visible page
-   (Basit: tüm kartlar gallery)
-============================================================ */
-(function(){
-    const modalEl = document.getElementById('imageModal');
-    const modalImg = document.getElementById('modalImage');
-    const modalMeta = document.getElementById('modalMeta');
-    const prevBtn = document.getElementById('prevImage');
-    const nextBtn = document.getElementById('nextImage');
-
-    if (!modalEl || !modalImg || !prevBtn || !nextBtn) return;
-
-    let modalImages = [];
-    let modalPages = [];
-    let currentIndex = 0;
-
-    modalEl.addEventListener('show.bs.modal', function(event){
+    detailModal.addEventListener('show.bs.modal', function(event){
         const trigger = event.relatedTarget;
         if (!trigger) return;
 
-        const all = Array.from(document.querySelectorAll('#imageContainer img[data-img-src]'));
-        modalImages = all.map(x => x.getAttribute('data-img-src'));
-        modalPages = all.map(x => x.getAttribute('data-page'));
+        const img = trigger.getAttribute('data-img') || '';
+        const page = trigger.getAttribute('data-page') || '-';
+        const label = trigger.getAttribute('data-label') || 'unknown';
+        const conf = trigger.getAttribute('data-confidence') || '0';
+        const person = trigger.getAttribute('data-person') || '0';
+        const logo = trigger.getAttribute('data-logo') || '0';
+        const game = trigger.getAttribute('data-game') || '0';
+        const ocr = trigger.getAttribute('data-ocr') || '';
+        const explanation = trigger.getAttribute('data-explanation') || '';
+        const personArea = trigger.getAttribute('data-person-area') || '-';
+        const logoArea = trigger.getAttribute('data-logo-area') || '-';
+        const boxCount = trigger.getAttribute('data-box-count') || '-';
+        const boardsRaw = trigger.getAttribute('data-boards') || '[]';
 
-        const clickedSrc = trigger.getAttribute('data-img-src');
-        currentIndex = Math.max(0, modalImages.indexOf(clickedSrc));
+        let boards = [];
+        try {
+            boards = JSON.parse(boardsRaw);
+        } catch (e) {
+            boards = [];
+        }
 
-        modalImg.src = modalImages[currentIndex] || clickedSrc || '';
-        modalMeta.textContent = 'Sayfa: ' + (modalPages[currentIndex] || '-');
-        resetTransform();
+        if (modalImage) modalImage.src = img;
+        if (kvPage) kvPage.textContent = page;
+        if (kvLabel) kvLabel.textContent = label;
+        if (kvConfidence) kvConfidence.textContent = conf;
+        if (kvBoxCount) kvBoxCount.textContent = boxCount;
+        if (kvPersonArea) kvPersonArea.textContent = personArea;
+        if (kvLogoArea) kvLogoArea.textContent = logoArea;
+        if (kvPerson) kvPerson.textContent = person;
+        if (kvLogoGame) kvLogoGame.textContent = `logo ${logo} / game ${game}`;
+        if (modalExplanation) modalExplanation.textContent = explanation;
+        if (modalOcr) modalOcr.textContent = ocr || 'OCR metni bulunamadı.';
+        if (copyBtn) copyBtn.dataset.copy = ocr || '';
+
+        if (modalBoardsContainer) modalBoardsContainer.innerHTML = '';
+
+        if (boards && boards.length > 0) {
+            if (modalBoardsWrap) modalBoardsWrap.style.display = 'block';
+
+            boards.forEach(board => {
+                const fenHtml = board.fen
+                    ? `<div class="fen-box">${escapeHtml(board.fen)}</div>`
+                    : '';
+
+                const imgHtml = board.board_img_b64
+                    ? `<img src="data:image/png;base64,${board.board_img_b64}" class="modal-board-img" alt="board">`
+                    : '';
+
+                const card = document.createElement('div');
+                card.className = 'modal-board-card';
+                card.innerHTML = `
+                    ${imgHtml}
+                    <div class="board-meta">
+                        <div><strong>Board:</strong> ${escapeHtml(String(board.board_index ?? '-'))}</div>
+                        <div><strong>Source:</strong> ${escapeHtml(String(board.source ?? '-'))}</div>
+                        <div><strong>Score:</strong> ${escapeHtml(String(board.clf_score ?? '-'))}</div>
+                    </div>
+                    ${fenHtml}
+                `;
+                modalBoardsContainer.appendChild(card);
+            });
+        } else {
+            if (modalBoardsWrap) modalBoardsWrap.style.display = 'none';
+        }
     });
 
-    function show(i){
-        if (!modalImages.length) return;
-        currentIndex = (i + modalImages.length) % modalImages.length;
-        modalImg.src = modalImages[currentIndex];
-        modalMeta.textContent = 'Sayfa: ' + (modalPages[currentIndex] || '-');
-        resetTransform();
+    copyBtn?.addEventListener('click', async function(){
+        const text = this.dataset.copy || '';
+        try{
+            await navigator.clipboard.writeText(text);
+            const old = this.innerHTML;
+            this.innerHTML = '<i class="bi bi-check2 me-1"></i> Kopyalandı';
+            this.disabled = true;
+            setTimeout(() => {
+                this.innerHTML = old;
+                this.disabled = false;
+            }, 900);
+        } catch(e){}
+    });
+
+    function escapeHtml(str) {
+        return str
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
     }
-
-    nextBtn.addEventListener('click', ()=> show(currentIndex + 1));
-    prevBtn.addEventListener('click', ()=> show(currentIndex - 1));
-
-    // Zoom & Pan
-    let scale = 1;
-    let isDragging = false;
-    let startX, startY, originX = 0, originY = 0;
-
-    function applyTransform(){
-        modalImg.style.transform = `translate(${originX}px, ${originY}px) scale(${scale})`;
-    }
-    function resetTransform(){
-        scale = 1;
-        originX = 0; originY = 0;
-        applyTransform();
-    }
-
-    modalImg.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        scale += e.deltaY * -0.001;
-        scale = Math.min(Math.max(1, scale), 5);
-        applyTransform();
-    });
-
-    modalImg.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        modalImg.style.cursor = 'grabbing';
-        startX = e.clientX - originX;
-        startY = e.clientY - originY;
-    });
-
-    document.addEventListener('mouseup', () => {
-        isDragging = false;
-        modalImg.style.cursor = 'grab';
-    });
-
-    document.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        originX = e.clientX - startX;
-        originY = e.clientY - startY;
-        applyTransform();
-    });
 })();
 </script>
-
 </body>
 </html>

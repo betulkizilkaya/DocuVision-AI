@@ -8,7 +8,7 @@ from ultralytics import YOLO
 from pathlib import Path
 
 # Senin kendi fonksiyonların (FEN üretimi ve kayıt için)
-from stage_fen import (
+from app.model.stage_fen import (
     FenParams,
     ensure_tables,
     load_piece_model_and_index,
