@@ -4,12 +4,6 @@ import re
 import csv
 import cv2
 import numpy as np
-import tempfile
-import os
-
-import shutil
-
-from app.image.chess_notation_ocr import process_single_image
 
 from PIL import Image
 from pathlib import Path
@@ -35,7 +29,6 @@ LOGO_PERSON_PENALTY = 0.55
 LOGO_PORTRAIT_LAYOUT_PENALTY = 0.65
 LOGO_CENTER_FRAME_PENALTY = 0.65
 
-# Dominance thresholds
 PERSON_DOMINANCE_MIN_AREA = 0.18
 PERSON_DOMINANCE_MIN_SCORE = 0.55
 
@@ -65,20 +58,13 @@ def fetch_images(conn):
 
 
 # ---------------------------
-# PERSON DETECTION (YOLOv8)
+# PERSON DETECTION
 # ---------------------------
 print(f"[INFO] Loading YOLO person model: {PERSON_MODEL_PATH}")
 person_model = YOLO(PERSON_MODEL_PATH)
 
 
 def detect_person(img):
-    """
-    Returns:
-        has_person (0/1)
-        person_score (0.0-1.0)
-        person_boxes [(x1,y1,x2,y2,conf), ...]
-        max_person_area_ratio
-    """
     try:
         img_cv = np.array(img)
 
@@ -126,10 +112,6 @@ def detect_person(img):
                 bw = max(0, x2 - x1)
                 bh = max(0, y2 - y1)
                 box_area = float(bw * bh)
-
-                if image_area <= 0:
-                    continue
-
                 area_ratio = box_area / image_area
 
                 if area_ratio < PERSON_MIN_BOX_AREA_RATIO:
@@ -194,9 +176,12 @@ def get_ocr_text(conn, image_id):
             (image_id,)
         )
         row = cur.fetchone()
+
         if not row or not row[0]:
             return ""
+
         return row[0].strip()
+
     except Exception as e:
         print(f"[OCR TEXT ERROR] image_id={image_id}, error={e}")
         return ""
@@ -215,12 +200,6 @@ def estimate_text_density(text):
 
 
 def detect_logo_heuristic(img, ocr_text="", person=0, p_score=0.0):
-    """
-    Returns:
-        has_logo
-        logo_score
-        logo_dominance_area_ratio
-    """
     try:
         img_cv = np.array(img)
 
@@ -247,7 +226,9 @@ def detect_logo_heuristic(img, ocr_text="", person=0, p_score=0.0):
             new_w = max(1, int(w * scale))
             new_h = max(1, int(h * scale))
             small_for_color = cv2.resize(
-                img_cv, (new_w, new_h), interpolation=cv2.INTER_AREA
+                img_cv,
+                (new_w, new_h),
+                interpolation=cv2.INTER_AREA
             )
 
         pixels = small_for_color.reshape(-1, 3)
@@ -257,11 +238,20 @@ def detect_logo_heuristic(img, ocr_text="", person=0, p_score=0.0):
         entropy = safe_entropy(gray)
 
         contours, _ = cv2.findContours(
-            edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+            edges,
+            cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_SIMPLE
         )
 
-        large_contours = [c for c in contours if cv2.contourArea(c) > area * 0.01]
-        medium_contours = [c for c in contours if cv2.contourArea(c) > area * 0.002]
+        large_contours = [
+            c for c in contours
+            if cv2.contourArea(c) > area * 0.01
+        ]
+
+        medium_contours = [
+            c for c in contours
+            if cv2.contourArea(c) > area * 0.002
+        ]
 
         contour_count = len(large_contours)
         medium_contour_count = len(medium_contours)
@@ -278,21 +268,28 @@ def detect_logo_heuristic(img, ocr_text="", person=0, p_score=0.0):
             for c in large_contours:
                 x, y, cw, ch = cv2.boundingRect(c)
                 rect_area = cw * ch
+
                 if rect_area > largest_rect_area:
                     largest_rect_area = rect_area
                     largest_rect = (x, y, cw, ch)
 
         _, thresh = cv2.threshold(
-            gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+            gray,
+            0,
+            255,
+            cv2.THRESH_BINARY + cv2.THRESH_OTSU
         )
 
         num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(
-            thresh, connectivity=8
+            thresh,
+            connectivity=8
         )
 
         component_areas = []
+
         for i in range(1, num_labels):
             comp_area = stats[i, cv2.CC_STAT_AREA]
+
             if area * 0.001 < comp_area < area * 0.2:
                 component_areas.append(comp_area)
 
@@ -382,81 +379,6 @@ def detect_logo_heuristic(img, ocr_text="", person=0, p_score=0.0):
 
 
 # ---------------------------
-# GAME NOTATION (FRIEND OCR PIPELINE)
-# ---------------------------
-def get_notation_ocr_text(conn, image_id):
-    try:
-        cur = conn.cursor()
-        row = cur.execute("""
-            SELECT normalized_text
-            FROM notation_ocr
-            WHERE image_id = ?
-        """, (image_id,)).fetchone()
-
-        if not row or not row[0]:
-            return ""
-
-        return row[0].strip()
-
-    except Exception as e:
-        print(f"[NOTATION OCR READ ERROR] image_id={image_id}, error={e}")
-        return ""
-
-
-def score_notation_text(text):
-    """
-    Arkadaşının OCR çıktısından,
-    mevcut pipeline'ın beklediği has_game_notation / game_notation_score üretir.
-    """
-    if not text:
-        return 0, 0.0
-
-    text = re.sub(r"\s+", " ", text).strip()
-
-    move_number_count = len(re.findall(r"\b\d+\.(?:\.\.)?\b", text))
-    san_like_count = len(re.findall(
-        r"\b(?:O-O-O|O-O|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?[+#]?|[a-h][1-8](?:=[QRBN])?[+#]?)\b",
-        text
-    ))
-
-    total_signal = move_number_count + san_like_count
-
-    if move_number_count >= 2 and san_like_count >= 4:
-        score = min(1.0, 0.35 + total_signal * 0.06)
-        return 1, round(score, 4)
-
-    if san_like_count >= 6:
-        score = min(1.0, 0.30 + san_like_count * 0.07)
-        return 1, round(score, 4)
-
-    return 0, 0.0
-
-
-def detect_game_notation_with_friend_ocr(conn, image_id, pil_img):
-    temp_path = None
-
-    try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
-            pil_img.save(tmp.name)
-            temp_path = tmp.name
-
-        process_single_image(image_id, temp_path)
-
-        notation_text = get_notation_ocr_text(conn, image_id)
-        has_game, score = score_notation_text(notation_text)
-
-        return has_game, score
-
-    except Exception as e:
-        print(f"[FRIEND OCR GAME ERROR] image_id={image_id}, error={e}")
-        return 0, 0.0
-
-    finally:
-        if temp_path and os.path.exists(temp_path):
-            os.remove(temp_path)
-
-
-# ---------------------------
 # DOMINANCE HELPERS
 # ---------------------------
 def is_person_dominant(person, p_score, person_area_ratio, ocr_text):
@@ -477,7 +399,14 @@ def is_person_dominant(person, p_score, person_area_ratio, ocr_text):
     return True
 
 
-def is_logo_dominant(logo, l_score, logo_area_ratio, ocr_text, person, person_area_ratio):
+def is_logo_dominant(
+    logo,
+    l_score,
+    logo_area_ratio,
+    ocr_text,
+    person,
+    person_area_ratio
+):
     text_len = len(re.sub(r"\s+", " ", ocr_text).strip())
 
     if not logo:
@@ -508,23 +437,34 @@ def is_logo_dominant(logo, l_score, logo_area_ratio, ocr_text, person, person_ar
 # LABEL SELECTION
 # ---------------------------
 def choose_label(
-    person, p_score,
-    logo, l_score,
-    game, g_score,
+    person,
+    p_score,
+    logo,
+    l_score,
     person_area_ratio=0.0,
     logo_area_ratio=0.0,
     ocr_text=""
 ):
-    person_dom = is_person_dominant(person, p_score, person_area_ratio, ocr_text)
-    logo_dom = is_logo_dominant(logo, l_score, logo_area_ratio, ocr_text, person, person_area_ratio)
+    person_dom = is_person_dominant(
+        person,
+        p_score,
+        person_area_ratio,
+        ocr_text
+    )
 
-    if game == 1 and g_score >= 0.45:
-        return "game_notation", round(g_score, 4)
+    logo_dom = is_logo_dominant(
+        logo,
+        l_score,
+        logo_area_ratio,
+        ocr_text,
+        person,
+        person_area_ratio
+    )
 
-    if person_dom and (p_score >= l_score):
+    if person_dom and p_score >= l_score:
         return "person", round(p_score, 4)
 
-    if logo_dom and (l_score > p_score):
+    if logo_dom and l_score > p_score:
         return "logo", round(l_score, 4)
 
     return "unknown", 0.0
@@ -547,14 +487,12 @@ def update_features(conn, image_id, data):
     if exists:
         cur.execute("""
             UPDATE image_features SET
-            has_person=?,
-            person_score=?,
-            has_logo=?,
-            logo_score=?,
-            has_game_notation=?,
-            game_notation_score=?,
-            predicted_label=?,
-            predicted_confidence=?
+                has_person=?,
+                person_score=?,
+                has_logo=?,
+                logo_score=?,
+                predicted_label=?,
+                predicted_confidence=?
             WHERE image_id=?
         """, (*data, image_id))
     else:
@@ -565,12 +503,10 @@ def update_features(conn, image_id, data):
                 person_score,
                 has_logo,
                 logo_score,
-                has_game_notation,
-                game_notation_score,
                 predicted_label,
                 predicted_confidence
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (image_id, *data))
 
     if image_id <= 3:
@@ -585,6 +521,7 @@ def process_all():
 
     conn = create_connection()
     images = fetch_images(conn)
+
     print(f"[CHECK] Gelen görsel sayısı: {len(images)}")
     print(f"{len(images)} görsel analiz ediliyor...")
 
@@ -592,6 +529,7 @@ def process_all():
     out_dir.mkdir(exist_ok=True)
 
     debug_person_dir = out_dir / "person_debug"
+
     if SAVE_PERSON_DEBUG_BOXES:
         debug_person_dir.mkdir(exist_ok=True)
 
@@ -601,10 +539,12 @@ def process_all():
 
     csv_writer.writerow([
         "image_id",
-        "person", "person_score",
-        "logo", "logo_score",
-        "game", "game_score",
-        "label", "confidence",
+        "person",
+        "person_score",
+        "logo",
+        "logo_score",
+        "label",
+        "confidence",
         "saved_image",
         "person_box_count",
         "person_area_ratio",
@@ -621,6 +561,7 @@ def process_all():
                 img = Image.open(io.BytesIO(blob)).convert("RGB")
 
                 person, p_score, person_boxes, person_area_ratio = detect_person(img)
+
                 ocr_text = get_ocr_text(conn, img_id)
 
                 logo, l_score, logo_area_ratio = detect_logo_heuristic(
@@ -630,12 +571,11 @@ def process_all():
                     p_score=p_score
                 )
 
-                game, g_score = detect_game_notation_with_friend_ocr(conn, img_id, img)
-
                 label, conf = choose_label(
-                    person, p_score,
-                    logo, l_score,
-                    game, g_score,
+                    person,
+                    p_score,
+                    logo,
+                    l_score,
                     person_area_ratio=person_area_ratio,
                     logo_area_ratio=logo_area_ratio,
                     ocr_text=ocr_text
@@ -647,7 +587,6 @@ def process_all():
                         f"person={person}, p_score={p_score}, boxes={len(person_boxes)}, "
                         f"person_area_ratio={person_area_ratio}, "
                         f"logo={logo}, l_score={l_score}, logo_area_ratio={logo_area_ratio}, "
-                        f"game={game}, g_score={g_score}, "
                         f"text_len={len(ocr_text)}, "
                         f"label={label}, conf={conf}"
                     )
@@ -655,7 +594,14 @@ def process_all():
                 update_features(
                     conn,
                     img_id,
-                    (person, p_score, logo, l_score, game, g_score, label, conf)
+                    (
+                        person,
+                        p_score,
+                        logo,
+                        l_score,
+                        label,
+                        conf
+                    )
                 )
 
                 safe_label = str(label).replace(" ", "_")
@@ -671,10 +617,12 @@ def process_all():
 
                 csv_writer.writerow([
                     img_id,
-                    person, p_score,
-                    logo, l_score,
-                    game, g_score,
-                    label, conf,
+                    person,
+                    p_score,
+                    logo,
+                    l_score,
+                    label,
+                    conf,
                     image_filename,
                     len(person_boxes),
                     person_area_ratio,
