@@ -9,7 +9,7 @@ def delete_multi_fen_table():
         cursor = conn.cursor()
 
         # Tabloyu silme komutu
-        cursor.execute("DROP TABLE IF EXISTS final_boards")
+        cursor.execute("DROP TABLE IF EXISTS chess_fen")
 
         conn.commit()
         print("[BAŞARILI] tablo tamamen silindi.")

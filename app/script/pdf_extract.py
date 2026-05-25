@@ -65,6 +65,8 @@ def extract_images_from_pdf(pdf_path: Path, conn):
     image_counter = 0
 
     for page_no, page in enumerate(doc, start=1):
+
+
         for img_index, img in enumerate(page.get_images(full=True)):
             xref = img[0]
 
