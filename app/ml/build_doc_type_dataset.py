@@ -1,55 +1,141 @@
-# app/ml/build_doc_type_dataset.py
-
 import sys
 from pathlib import Path
 
 import pdfplumber
 import pandas as pd
 
-# ------------------------------------------------------------
-# Proje kökü: .../ProjectNexus-Intelligent-PDF-Analysis
-# ------------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.core.paths import DATA_DIR
 
+RAW_DATASET_DIR = DATA_DIR / "doc_type_raw"
+OUTPUT_CSV = DATA_DIR / "doc_type_dataset.csv"
+
+CHUNK_SIZE = 1800
+CHUNK_OVERLAP = 200
+MIN_CHUNK_LEN = 300
+MIN_DOCUMENT_TEXT_LEN = 300
+
+EMPTY_LABEL = "image_only_or_empty"
+
+
+def clean_text(text: str) -> str:
+    return " ".join(text.split())
+
+
+def chunk_text(text: str):
+    text = clean_text(text)
+    chunks = []
+
+    start = 0
+    while start < len(text):
+        end = start + CHUNK_SIZE
+        chunk = text[start:end].strip()
+
+        if len(chunk) >= MIN_CHUNK_LEN:
+            chunks.append(chunk)
+
+        start = end - CHUNK_OVERLAP
+
+        if start >= len(text):
+            break
+
+    return chunks
+
+
+def extract_pdf_chunks(pdf_path: Path, label: str):
+    rows = []
+    full_text_parts = []
+
+    with pdfplumber.open(str(pdf_path)) as pdf:
+        for page_no, page in enumerate(pdf.pages, start=1):
+            text = clean_text(page.extract_text() or "")
+            full_text_parts.append(text)
+
+            for chunk_id, chunk in enumerate(chunk_text(text)):
+                rows.append({
+                    "filename": pdf_path.name,
+                    "file_path": str(pdf_path),
+                    "page_no": page_no,
+                    "chunk_id": chunk_id,
+                    "text": chunk,
+                    "label": label,
+                    "source_type": "pdf_text",
+                })
+
+    full_text = clean_text(" ".join(full_text_parts))
+
+    if len(full_text) < MIN_DOCUMENT_TEXT_LEN:
+        return [{
+            "filename": pdf_path.name,
+            "file_path": str(pdf_path),
+            "page_no": 0,
+            "chunk_id": 0,
+            "text": "__NO_EXTRACTABLE_TEXT__",
+            "label": EMPTY_LABEL,
+            "source_type": "empty_or_scanned",
+        }]
+
+    return rows
+
 
 def main():
-    DATA_DIR.mkdir(exist_ok=True)
-
-    pdf_labels = {
-        "texas_pdf.pdf": "tournament_report",
-        "Texas-Knights - Nov-Dec-2023.pdf": "tournament_report",
-        "Encyclopedia of Chess Miniatures (2014).pdf": "book_chapter",
-        "Test Your Chess - Assess and Improve Your Chess Skills.pdf": "book_chapter",
-        "OSD Satranç Ders Notları.pdf": "book_chapter",
-        "satrancailkadim.pdf": "book_chapter",
-    }
+    if not RAW_DATASET_DIR.exists():
+        raise FileNotFoundError(
+            f"Dataset klasörü bulunamadı: {RAW_DATASET_DIR}\n"
+            f"Şu yapıda oluştur:\n"
+            f"data/doc_type_raw/educational_chess/*.pdf\n"
+            f"data/doc_type_raw/tournament_report/*.pdf\n"
+            f"data/doc_type_raw/image_only_or_empty/*.pdf"
+        )
 
     rows = []
 
-    for filename, label in pdf_labels.items():
-        pdf_path = DATA_DIR / filename
-        if not pdf_path.exists():
-            print(f"[Uyarı] PDF bulunamadı, atlanıyor: {pdf_path}")
-            continue
+    label_dirs = [p for p in RAW_DATASET_DIR.iterdir() if p.is_dir()]
 
-        print(f"[OK] PDF okunuyor: {pdf_path.name}")
-        with pdfplumber.open(pdf_path) as pdf:
-            text = "\n".join((page.extract_text() or "") for page in pdf.pages)
+    if not label_dirs:
+        raise RuntimeError(f"{RAW_DATASET_DIR} içinde sınıf klasörü yok.")
 
-        rows.append({"text": text, "label": label})
+    for label_dir in label_dirs:
+        label = label_dir.name
+        pdf_files = sorted(label_dir.glob("*.pdf"))
+
+        print(f"\n[LABEL] {label} | PDF sayısı: {len(pdf_files)}")
+
+        for pdf_path in pdf_files:
+            print(f"  [OK] İşleniyor: {pdf_path.name}")
+
+            try:
+                pdf_rows = extract_pdf_chunks(pdf_path, label)
+            except Exception as e:
+                print(f"  [HATA] Okunamadı: {pdf_path.name} | {e}")
+                continue
+
+            rows.extend(pdf_rows)
 
     if not rows:
-        print("Hiç veri yok, CSV oluşturulmadı.")
-        return
+        raise RuntimeError("Hiç veri üretilemedi.")
 
     df = pd.DataFrame(rows)
-    csv_path = DATA_DIR / "doc_type_dataset.csv"
-    df.to_csv(csv_path, index=False, encoding="utf-8")
-    print(f"\n[OK] Dataset kaydedildi: {csv_path}")
-    print(df.head())
+    df = df[df["text"].str.strip().astype(bool)]
+    df = df.drop_duplicates(subset=["filename", "page_no", "chunk_id", "text", "label"])
+
+    OUTPUT_CSV.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(OUTPUT_CSV, index=False, encoding="utf-8")
+
+    print("\n[OK] Dataset oluşturuldu.")
+    print(f"CSV: {OUTPUT_CSV}")
+    print(f"Toplam chunk sayısı: {len(df)}")
+
+    print("\nSınıf dağılımı:")
+    print(df["label"].value_counts())
+
+    print("\nPDF dağılımı:")
+    print(df.groupby("label")["filename"].nunique())
+
+    print("\nKaynak tipi dağılımı:")
+    print(df["source_type"].value_counts())
 
 
 if __name__ == "__main__":
