@@ -19,9 +19,36 @@ MIN_DOCUMENT_TEXT_LEN = 300
 
 EMPTY_LABEL = "image_only_or_empty"
 
+TOURNAMENT_HINTS = [
+    "tournament",
+    "chess festival",
+    "rapid tournament",
+    "blitz tournament",
+    "open chess",
+    "championship",
+    "standings",
+    "ranking",
+    "rank",
+    "pts",
+    "tb1",
+    "tb2",
+    "federation",
+    "fide",
+    "arbiter",
+    "pairing",
+    "round",
+    "results",
+    "bulletin",
+]
+
 
 def clean_text(text: str) -> str:
     return " ".join(text.split())
+
+
+def looks_like_tournament(text: str) -> bool:
+    text = clean_text(text).lower()
+    return any(keyword in text for keyword in TOURNAMENT_HINTS)
 
 
 def chunk_text(text: str):
@@ -67,6 +94,17 @@ def extract_pdf_chunks(pdf_path: Path, label: str):
     full_text = clean_text(" ".join(full_text_parts))
 
     if len(full_text) < MIN_DOCUMENT_TEXT_LEN:
+        if looks_like_tournament(full_text):
+            return [{
+                "filename": pdf_path.name,
+                "file_path": str(pdf_path),
+                "page_no": 0,
+                "chunk_id": 0,
+                "text": full_text if full_text else "__TOURNAMENT_LOW_TEXT__",
+                "label": "tournament_report",
+                "source_type": "low_text_tournament",
+            }]
+
         return [{
             "filename": pdf_path.name,
             "file_path": str(pdf_path),

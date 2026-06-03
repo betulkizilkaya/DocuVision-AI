@@ -11,6 +11,39 @@ from sklearn.metrics import classification_report, confusion_matrix
 ROOT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_MODEL_PATH = ROOT_DIR / "data" / "models" / "doc_type_clf.joblib"
 
+MIN_DOCUMENT_TEXT_LEN = 300
+
+TOURNAMENT_HINTS = [
+    "tournament",
+    "chess festival",
+    "rapid tournament",
+    "blitz tournament",
+    "open chess",
+    "championship",
+    "standings",
+    "ranking",
+    "rank",
+    "pts",
+    "tb1",
+    "tb2",
+    "federation",
+    "fide",
+    "arbiter",
+    "pairing",
+    "round",
+    "results",
+    "bulletin",
+]
+
+
+def clean_text(text: str) -> str:
+    return " ".join((text or "").split())
+
+
+def looks_like_tournament(text: str) -> bool:
+    text = clean_text(text).lower()
+    return any(keyword in text for keyword in TOURNAMENT_HINTS)
+
 
 def build_pipeline(use_svm: bool = True):
     clf = LinearSVC() if use_svm else LogisticRegression(max_iter=3000)
@@ -89,9 +122,11 @@ def load_doc_classifier(model_path: Path = DEFAULT_MODEL_PATH):
 
 
 def predict_doc_type(text: str, model_path: Path = DEFAULT_MODEL_PATH):
-    text = text or ""
+    text = clean_text(text)
 
-    if len(text.strip()) < 300:
+    if len(text) < MIN_DOCUMENT_TEXT_LEN:
+        if looks_like_tournament(text):
+            return "tournament_report"
         return "image_only_or_empty"
 
     model = load_doc_classifier(model_path)
