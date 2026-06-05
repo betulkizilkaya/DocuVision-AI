@@ -1,23 +1,65 @@
-# app/ml/train_doc_classifier.py
-
 from pathlib import Path
+
 import pandas as pd
+import pdfplumber
 
-# Model trainer fonksiyonun nerede ise ona göre import:
-# Senin paylaştığın yapıda bu fonksiyon app/text/document_classifier.py içinde.
-from app.text.document_classifier import train_doc_classifier
+from app.text.document_classifier import (
+    train_doc_classifier,
+    load_doc_classifier,
+    looks_like_tournament,
+)
 
-# ------------------------------------------------------------
-# Proje kökü: .../ProjectNexus-Intelligent-PDF-Analysis
-# Bu dosya: app/ml/train_doc_classifier.py => parents[2] proje kökü
-# ------------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# Dataset: proje_kökü/data/doc_type_dataset.csv
 DATASET_PATH = PROJECT_ROOT / "data" / "doc_type_dataset.csv"
-
-# Model: proje_kökü/data/models/doc_type_clf.joblib
 MODEL_PATH = PROJECT_ROOT / "data" / "models" / "doc_type_clf.joblib"
+
+DATA_DIR = PROJECT_ROOT / "data"
+
+MIN_DOCUMENT_TEXT_LEN = 300
+
+
+def clean_text(text: str) -> str:
+    return " ".join((text or "").split())
+
+
+def extract_full_text(pdf_path: Path) -> str:
+    parts = []
+
+    with pdfplumber.open(str(pdf_path)) as pdf:
+        for page in pdf.pages:
+            parts.append(page.extract_text() or "")
+
+    return clean_text(" ".join(parts))
+
+
+def predict_external_pdfs():
+    model = load_doc_classifier(MODEL_PATH)
+
+    pdf_files = sorted(DATA_DIR.glob("*.pdf"))
+
+    if not pdf_files:
+        print("\n[INFO] data/ klasöründe test için PDF bulunamadı.")
+        return
+
+    print("\n[BAĞIMSIZ TEST / DATA KLASÖRÜ PDF TAHMİNLERİ]")
+
+    for pdf_path in pdf_files:
+        try:
+            text = extract_full_text(pdf_path)
+        except Exception as e:
+            print(f"[HATA] {pdf_path.name} okunamadı: {e}")
+            continue
+
+        if len(text.strip()) < MIN_DOCUMENT_TEXT_LEN:
+            if looks_like_tournament(text):
+                pred = "tournament_report"
+            else:
+                pred = "image_only_or_empty"
+        else:
+            pred = model.predict([text])[0]
+
+        print(f"{pdf_path.name} -> {pred}")
 
 
 def main() -> None:
@@ -26,29 +68,58 @@ def main() -> None:
     if not DATASET_PATH.exists():
         raise FileNotFoundError(
             f"Dataset bulunamadı: {DATASET_PATH}\n"
-            f"Önce şunu üret: python -m app.ml.build_doc_type_dataset"
+            f"Önce çalıştır:\n"
+            f"python -m app.ml.build_doc_type_dataset"
         )
 
     df = pd.read_csv(DATASET_PATH)
 
-    # Beklenen kolonlar: text, label
-    if "text" not in df.columns or "label" not in df.columns:
-        raise ValueError(f"CSV kolonları hatalı. Beklenen: text,label | Bulunan: {list(df.columns)}")
+    required_cols = {"text", "label", "filename"}
+    missing = required_cols - set(df.columns)
 
-    texts = df["text"].fillna("").astype(str).tolist()
-    labels = df["label"].fillna("").astype(str).tolist()
+    if missing:
+        raise ValueError(
+            f"CSV kolonları eksik: {missing}\n"
+            f"Bulunan kolonlar: {list(df.columns)}"
+        )
 
-    # Boş kayıtları ayıkla
-    cleaned = [(t, y) for (t, y) in zip(texts, labels) if t.strip() and y.strip()]
-    if not cleaned:
-        raise RuntimeError("Dataset boş/etiketsiz görünüyor (text/label).")
+    df["text"] = df["text"].fillna("").astype(str)
+    df["label"] = df["label"].fillna("").astype(str)
+    df["filename"] = df["filename"].fillna("").astype(str)
 
-    texts, labels = zip(*cleaned)
+    df = df[df["text"].str.strip().astype(bool)]
+    df = df[df["label"].str.strip().astype(bool)]
+    df = df[df["filename"].str.strip().astype(bool)]
 
-    print(f"[OK] Eğitim başlıyor. Örnek sayısı: {len(texts)} | Sınıf sayısı: {len(set(labels))}")
-    train_doc_classifier(list(texts), list(labels), model_path=MODEL_PATH, use_svm=True)
+    if df.empty:
+        raise RuntimeError("Dataset boş görünüyor.")
 
-    print(f"[OK] Model yazıldı: {MODEL_PATH}")
+    texts = df["text"].tolist()
+    labels = df["label"].tolist()
+    groups = df["filename"].tolist()
+
+    print(f"[OK] Eğitim başlıyor.")
+    print(f"Toplam chunk: {len(texts)}")
+    print(f"Sınıflar: {sorted(set(labels))}")
+
+    print("\nSınıf dağılımı:")
+    print(df["label"].value_counts())
+
+    print("\nPDF dağılımı:")
+    print(df.groupby("label")["filename"].nunique())
+
+    train_doc_classifier(
+        texts=texts,
+        labels=labels,
+        groups=groups,
+        model_path=MODEL_PATH,
+        use_svm=True,
+        test_size=0.2,
+    )
+
+    print(f"\n[OK] Model yazıldı: {MODEL_PATH}")
+
+    predict_external_pdfs()
 
 
 if __name__ == "__main__":

@@ -6,10 +6,11 @@ pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tessera
 def main():
     # test için elle ver
     image_id = 1
-    image_path = r"C:\Users\betul\OneDrive\Belgeler\GitHub\DocuVision-AI\temp\test_notation.png"
+    image_path = r"D:\GithubProject\ProjectNexus-Intelligent-PDF-Analysis\temp\test_notation.png"
 
     process_single_image(image_id, image_path)
-    print("[OK] OCR + SAN doğrulama tamamlandı.")
+    print("[OK] OCR tamamlandı.")
 
 if __name__ == "__main__":
     main()
+

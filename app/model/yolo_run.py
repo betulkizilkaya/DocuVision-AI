@@ -12,7 +12,7 @@ MIN_YOLO_CONF = 0.50
 SQL_PAGES = """
             SELECT pi.id, pi.blob
             FROM pdf_images pi
-                     JOIN image_features f ON f.image_id = pi.id
+                    JOIN image_features f ON f.image_id = pi.id
             WHERE f.is_chessboard = 1 
             """
 
@@ -33,7 +33,7 @@ def ensure_tables(conn: sqlite3.Connection):
             UNIQUE(image_id, board_index)
         )
         """
-    )+
+    )
     conn.commit()
 
 def decode_page_blob(blob: bytes):
