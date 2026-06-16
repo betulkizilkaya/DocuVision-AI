@@ -3,11 +3,7 @@ from pathlib import Path
 import pandas as pd
 import pdfplumber
 
-from app.text.document_classifier import (
-    train_doc_classifier,
-    load_doc_classifier,
-    looks_like_tournament,
-)
+from app.text.document_classifier import train_doc_classifier, load_doc_classifier
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -20,7 +16,7 @@ MIN_DOCUMENT_TEXT_LEN = 300
 
 
 def clean_text(text: str) -> str:
-    return " ".join((text or "").split())
+    return " ".join(text.split())
 
 
 def extract_full_text(pdf_path: Path) -> str:
@@ -52,10 +48,7 @@ def predict_external_pdfs():
             continue
 
         if len(text.strip()) < MIN_DOCUMENT_TEXT_LEN:
-            if looks_like_tournament(text):
-                pred = "tournament_report"
-            else:
-                pred = "image_only_or_empty"
+            pred = "image_only_or_empty"
         else:
             pred = model.predict([text])[0]
 
