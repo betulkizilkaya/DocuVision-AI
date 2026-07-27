@@ -1,3 +1,24 @@
+/* =========================================================
+   PROJECT NEXUS DESIGN REFRESH - PREMIUM PURPLE THEME
+   Ana renkleri tek noktadan yönetmek için eklendi.
+   ========================================================= */
+:root{
+    --nx-bg: #f6f7fb;
+    --nx-surface: rgba(255,255,255,.92);
+    --nx-surface-solid: #ffffff;
+    --nx-sidebar: #171b2a;
+    --nx-sidebar-2: #101421;
+    --nx-text: #172033;
+    --nx-muted: #667085;
+    --nx-border: rgba(16,24,40,.09);
+    --nx-brand: #6f5cff;
+    --nx-brand-2: #8b5cf6;
+    --nx-brand-3: #3b82f6;
+    --nx-brand-soft: rgba(111,92,255,.12);
+    --nx-shadow: 0 14px 34px rgba(16,24,40,.08);
+    --nx-shadow-hover: 0 22px 46px rgba(111,92,255,.18);
+}
+
 /* project/app/web/static/style.css - FINAL AND CLEAN CODE */
 
 /* --- FONT AND GENERAL LAYOUT --- */
@@ -64,14 +85,14 @@ body {
     cursor: pointer;
 }
 .sidebar-tree-header:hover {
-    color: #1abc9c;
+    color: #6f5cff;
     background-color: #34495e;
     transform: none;
 }
 
 .sidebar-tree-header.active,
 .sidebar-tree-header[aria-expanded="true"] {
-    color: #1abc9c !important; /* Tema yeşili */
+    color: #6f5cff !important; /* Tema yeşili */
     font-weight: 700;
 }
 
@@ -80,14 +101,14 @@ body {
     padding-left: 2.5rem !important;
 }
 .list-group-item-action:hover {
-    color: #1abc9c;
+    color: #6f5cff;
     background-color: #34495e;
     transform: translateX(3px);
 }
 
 .list-group-item-action.active {
     color: #fff !important;
-    background-color: #1abc9c !important;
+    background-color: #6f5cff !important;
     border-radius: 0;
     font-weight: 600;
 }
@@ -104,7 +125,7 @@ body {
 /* === HERO SECTION (Ana başlık bölümü) === */
 .hero-section {
   position: relative;
-  background: linear-gradient(135deg, #1abc9c 0%, #16a085 40%, #2c3e50 100%);
+  background: linear-gradient(135deg, #6f5cff 0%, #8b5cf6 40%, #2c3e50 100%);
   border-radius: 16px;
   overflow: hidden;
   color: #fff;
@@ -174,8 +195,8 @@ body {
 .metric-card:hover {
     /* Turkuaz (Aqua) renk efekti */
     transform: translateY(-5px); /* Hafif yukarı kalkma */
-    border-left: 6px solid #1abc9c; /* Sol şeridi aqua renge dönüştürür */
-    box-shadow: 0 8px 15px rgba(26, 188, 156, 0.35); /* Aqua renkli parlak gölge */
+    border-left: 6px solid #6f5cff; /* Sol şeridi aqua renge dönüştürür */
+    box-shadow: 0 8px 15px rgba(111, 92, 255, 0.28); /* Aqua renkli parlak gölge */
     cursor: pointer;
 }
 
@@ -399,14 +420,14 @@ body.dark-mode {
 /* Dark Mode'da AKTİF Ana Menü Başlığı (Örn: Data Extraction) */
 .dark-mode .sidebar-tree-header.active,
 .dark-mode .sidebar-tree-header[aria-expanded="true"] {
-    color: #1abc9c !important; /* Turkuaz rengi zorla */
+    color: #6f5cff !important; /* Turkuaz rengi zorla */
     background-color: transparent !important; /* Arka planı transparan tut (önemli) */
 }
 
 /* Sidebar ana başlıklarının Hover rengini koruyalım */
 .dark-mode .sidebar-tree-header:hover {
     background-color: #34495e !important; /* Koyu Mavi Hover Arka Planı */
-    color: #1abc9c !important; /* Turkuaz metin rengi */
+    color: #6f5cff !important; /* Turkuaz metin rengi */
 }
 
 /* 1. Sidebar Link Metin Rengi Düzeltmesi */
@@ -417,13 +438,13 @@ body.dark-mode {
 /* Sidebar alt menü öğelerinin hover ve active durumunu koyu modda belirginleştirir */
 .dark-mode .list-group-item-action:hover {
     background-color: #34495e !important; /* Koyu Mavi Hover */
-    color: #1abc9c !important;
+    color: #6f5cff !important;
 }
 
 /* Sidebar ALT MENÜ ÖĞESİ SEÇİLİ (ACTIVE) OLDUĞUNDA */
 .dark-mode .list-group-item-action.active {
     color: #fff !important;
-    background-color: #1abc9c !important; /* Turkuaz Arka Plan */
+    background-color: #6f5cff !important; /* Turkuaz Arka Plan */
     font-weight: 600;
 }
 
@@ -439,7 +460,7 @@ body.dark-mode {
     color: #a0a0a0;
 }
 .dark-mode .metric-value {
-    color: #1abc9c;
+    color: #6f5cff;
 }
 
 /* Dark Mode'da donuk (muted) metinlerin rengini açar */
@@ -500,7 +521,7 @@ body.dark-mode {
 }
 
 .dark-mode ::-webkit-scrollbar-thumb:hover {
-    background: #1abc9c; /* Hover rengi (turkuaz) */
+    background: #6f5cff; /* Hover rengi (turkuaz) */
 }
 
 /* Firefox için Scrollbar (Daha az özelleştirilebilir) */
@@ -527,15 +548,15 @@ body.dark-mode {
 /* Sayfalama Düğmeleri: Hover ve Odaklanma */
 .dark-mode .pagination .page-item:not(.disabled) .page-link:hover {
     background-color: #2c3e50 !important;
-    color: #1abc9c !important;
+    color: #6f5cff !important;
     border-color: #333 !important;
 }
 
 /* Sayfalama Düğmeleri: Aktif Sayfa - Kesinleştirme */
 .dark-mode .pagination .page-item.active .page-link {
-    background-color: #1abc9c !important; /* Tema Turkuaz Rengi */
+    background-color: #6f5cff !important; /* Tema Turkuaz Rengi */
     color: #fff !important;
-    border-color: #1abc9c !important;
+    border-color: #6f5cff !important;
 }
 
 /* Sütun Başlıklarındaki Sıralama İkonları (Oklar) DÜZELTMESİ */
@@ -613,18 +634,18 @@ body.dark-mode {
   /* Senin attığın yeşilin 1 tık koyusu */
   background: linear-gradient(
     135deg,
-    #1fa37a,
-    #178f6a
+    #6f5cff,
+    #8b5cf6
   );
 
-  box-shadow: 0 8px 20px rgba(23, 143, 106, .25);
+  box-shadow: 0 8px 20px rgba(111, 92, 255, .25);
   transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
   white-space: nowrap;
 }
 
 .btn-nexus:hover{
   transform: translateY(-2px);
-  box-shadow: 0 12px 26px rgba(23, 143, 106, .35);
+  box-shadow: 0 12px 26px rgba(111, 92, 255, .35);
   filter: brightness(1.03);
   color: #ffffff;
 }
@@ -641,9 +662,1823 @@ body.dark-mode {
   border-radius: 999px;
   font-weight: 800;
   font-size: 12px;
-  color: #0f5132;
-  background: rgba(25,135,84,.14);
-  border: 1px solid rgba(25,135,84,.25);
+  color: #3b2fbf;
+  background: rgba(111,92,255,.12);
+  border: 1px solid rgba(111,92,255,.25);
   white-space: nowrap;
 }
 
+
+
+/* =========================================================
+   FINAL POLISH OVERRIDES - daha modern, tekrar eden ve tutarlı görünüm
+   ========================================================= */
+body{
+    background:
+      radial-gradient(circle at top right, rgba(111,92,255,.10), transparent 32%),
+      radial-gradient(circle at bottom left, rgba(59,130,246,.08), transparent 30%),
+      var(--nx-bg) !important;
+    color: var(--nx-text);
+}
+
+#sidebar-wrapper{
+    background: linear-gradient(180deg, var(--nx-sidebar-2), var(--nx-sidebar)) !important;
+    border-right: 1px solid rgba(255,255,255,.08) !important;
+    box-shadow: 12px 0 34px rgba(16,24,40,.12);
+}
+
+.sidebar-heading{
+    background: rgba(255,255,255,.04) !important;
+    border-bottom: 1px solid rgba(255,255,255,.08) !important;
+    color: #fff !important;
+}
+
+.sidebar-tree-header,
+.list-group-item-action{
+    color: rgba(255,255,255,.76) !important;
+    border-radius: 14px !important;
+    margin: 4px 10px;
+}
+
+.sidebar-tree-header:hover,
+.list-group-item-action:hover,
+.sidebar-tree-header.active,
+.sidebar-tree-header[aria-expanded="true"]{
+    color: #ffffff !important;
+    background: rgba(111,92,255,.14) !important;
+}
+
+.list-group-item-action.active{
+    color: #fff !important;
+    background: linear-gradient(135deg, var(--nx-brand), var(--nx-brand-2)) !important;
+    box-shadow: 0 12px 26px rgba(111,92,255,.26);
+}
+
+.hero-section{
+    background:
+      radial-gradient(circle at top left, rgba(255,255,255,.24), transparent 28%),
+      linear-gradient(135deg, #6f5cff 0%, #8b5cf6 46%, #172033 100%) !important;
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 26px;
+    min-height: 230px;
+    box-shadow: 0 24px 60px rgba(111,92,255,.26);
+}
+
+.hero-overlay{
+    background:
+      radial-gradient(circle at 80% 20%, rgba(255,255,255,.22), transparent 26%),
+      linear-gradient(180deg, rgba(0,0,0,.04), rgba(0,0,0,.18));
+}
+
+.metric-card,
+.card{
+    background: var(--nx-surface) !important;
+    border: 1px solid var(--nx-border) !important;
+    border-radius: 20px !important;
+    box-shadow: var(--nx-shadow) !important;
+    backdrop-filter: blur(14px);
+}
+
+.metric-card{
+    border-left: 0 !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card::before{
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--nx-brand), var(--nx-brand-2), var(--nx-brand-3));
+}
+
+.metric-card:hover,
+.card:hover{
+    transform: translateY(-4px);
+    box-shadow: var(--nx-shadow-hover) !important;
+}
+
+.metric-title{
+    color: var(--nx-muted) !important;
+    font-weight: 700;
+}
+
+.metric-value{
+    color: var(--nx-text) !important;
+}
+
+.progress{
+    background-color: rgba(111,92,255,.12) !important;
+    border-radius: 999px;
+}
+
+.progress-bar{
+    background: linear-gradient(90deg, var(--nx-brand), var(--nx-brand-2)) !important;
+}
+
+.table-dark th,
+#list-text_similarity .datatable thead th{
+    background: #171b2a !important;
+    color: #f8fafc !important;
+}
+
+.btn-nexus{
+    background: linear-gradient(135deg, var(--nx-brand), var(--nx-brand-2)) !important;
+    box-shadow: 0 12px 26px rgba(111,92,255,.26) !important;
+}
+
+.fen-pill{
+    color: #3b2fbf !important;
+    background: rgba(111,92,255,.12) !important;
+    border-color: rgba(111,92,255,.24) !important;
+}
+
+.dark-mode{
+    --nx-bg: #0f1117;
+    --nx-surface: rgba(22,25,34,.94);
+    --nx-surface-solid: #161922;
+    --nx-text: #f5f7fb;
+    --nx-muted: rgba(255,255,255,.66);
+    --nx-border: rgba(255,255,255,.08);
+    --nx-shadow: 0 14px 34px rgba(0,0,0,.24);
+    --nx-shadow-hover: 0 22px 46px rgba(111,92,255,.22);
+}
+
+.dark-mode body,
+body.dark-mode{
+    background:
+      radial-gradient(circle at top right, rgba(111,92,255,.18), transparent 32%),
+      radial-gradient(circle at bottom left, rgba(59,130,246,.10), transparent 30%),
+      var(--nx-bg) !important;
+    color: var(--nx-text) !important;
+}
+
+.dark-mode .metric-card,
+.dark-mode .card{
+    background: var(--nx-surface) !important;
+    border-color: var(--nx-border) !important;
+}
+
+.dark-mode .metric-value{
+    color: #ffffff !important;
+}
+
+.dark-mode .table-striped > tbody > tr:nth-of-type(odd) > *{
+    background-color: #171b2a !important;
+}
+
+.dark-mode .table-striped > tbody > tr:nth-of-type(even) > *{
+    background-color: #202638 !important;
+}
+
+.dark-mode .pagination .page-item.active .page-link{
+    background: linear-gradient(135deg, var(--nx-brand), var(--nx-brand-2)) !important;
+    border-color: var(--nx-brand) !important;
+}
+
+.dark-mode ::-webkit-scrollbar-thumb:hover{
+    background: var(--nx-brand) !important;
+}
+
+/* ==========================================================
+   PINTEREST / PREMIUM TABLE DESIGN UPGRADE
+   Paste-safe override block. Keeps existing HTML and DataTables.
+   ========================================================== */
+
+:root{
+    --pin-bg: rgba(255,255,255,.76);
+    --pin-bg-solid: #ffffff;
+    --pin-ink: #172033;
+    --pin-muted: #7b8192;
+    --pin-line: rgba(111,92,255,.14);
+    --pin-line-strong: rgba(111,92,255,.25);
+    --pin-soft: rgba(111,92,255,.075);
+    --pin-soft-2: rgba(59,130,246,.07);
+    --pin-head: #151928;
+    --pin-radius: 24px;
+}
+
+/* Tablo bölümlerini Pinterest kart/pano hissine çeker */
+.table-container,
+.dataTables_wrapper{
+    width: 100%;
+}
+
+.card .table-container,
+.tab-pane > .table-container,
+#list-person-explorer .table-container,
+#list-entities-raw .table-container,
+#list-docs .table-container{
+    background:
+        radial-gradient(circle at top left, rgba(111,92,255,.10), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(59,130,246,.08), transparent 28%),
+        var(--pin-bg);
+    border: 1px solid var(--pin-line);
+    border-radius: var(--pin-radius);
+    padding: 14px;
+    box-shadow: 0 18px 44px rgba(16,24,40,.10);
+    overflow-x: auto;
+    backdrop-filter: blur(18px);
+}
+
+/* Person Explorer içindeki iki tablo kartını daha özel yap */
+#list-person-explorer .card{
+    border: 1px solid var(--pin-line) !important;
+    border-radius: 28px !important;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.76)) !important;
+    box-shadow: 0 22px 55px rgba(16,24,40,.10) !important;
+    overflow: hidden;
+    position: relative;
+}
+
+#list-person-explorer .card::before{
+    content:"";
+    position:absolute;
+    inset:0 0 auto 0;
+    height: 6px;
+    background: linear-gradient(90deg, #6f5cff, #8b5cf6, #3b82f6, #ec4899);
+}
+
+#list-person-explorer .card h5{
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    margin-top: 4px;
+    border-radius: 999px;
+    background: rgba(111,92,255,.10);
+    color: var(--pin-ink);
+    font-size: .98rem;
+    font-weight: 800;
+}
+
+/* DataTables üst kontrolleri */
+.dataTables_wrapper .row:first-child,
+.dataTables_wrapper .dt-layout-row:first-child{
+    align-items: center;
+    margin-bottom: 12px !important;
+    padding: 4px 2px 10px;
+    border-bottom: 1px solid rgba(111,92,255,.10);
+}
+
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dt-length,
+.dataTables_wrapper .dt-search{
+    color: var(--pin-muted) !important;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.dataTables_wrapper .dataTables_filter label,
+.dataTables_wrapper .dt-search label{
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dataTables_wrapper .dataTables_filter input,
+.dataTables_wrapper .dt-search input,
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dt-length select{
+    border-radius: 999px !important;
+    border: 1px solid var(--pin-line-strong) !important;
+    background: rgba(255,255,255,.82) !important;
+    color: var(--pin-ink) !important;
+    box-shadow: 0 8px 18px rgba(16,24,40,.06) !important;
+    outline: none !important;
+    transition: .18s ease;
+}
+
+.dataTables_wrapper .dataTables_filter input,
+.dataTables_wrapper .dt-search input{
+    min-width: 210px;
+    padding: 8px 14px !important;
+}
+
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dt-length select{
+    padding: 6px 28px 6px 12px !important;
+}
+
+.dataTables_wrapper .dataTables_filter input:focus,
+.dataTables_wrapper .dt-search input:focus,
+.dataTables_wrapper .dataTables_length select:focus,
+.dataTables_wrapper .dt-length select:focus{
+    border-color: #6f5cff !important;
+    box-shadow: 0 0 0 4px rgba(111,92,255,.12), 0 10px 22px rgba(111,92,255,.10) !important;
+}
+
+/* Asıl tablo: düz grid yerine editorial/pinterest board görünümü */
+table.dataTable.datatable,
+.datatable{
+    border-collapse: separate !important;
+    border-spacing: 0 8px !important;
+    border: 0 !important;
+    margin-top: 2px !important;
+    width: 100% !important;
+}
+
+.datatable thead tr,
+table.dataTable thead tr{
+    box-shadow: none !important;
+}
+
+.datatable thead th,
+table.dataTable thead th,
+.table-dark th,
+#list-text_similarity .datatable thead th{
+    background: linear-gradient(135deg, #171b2a, #232947) !important;
+    color: #ffffff !important;
+    border: 0 !important;
+    padding: 13px 14px !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    letter-spacing: .02em;
+    text-transform: none;
+    vertical-align: middle;
+}
+
+.datatable thead th:first-child,
+table.dataTable thead th:first-child{
+    border-top-left-radius: 18px !important;
+    border-bottom-left-radius: 18px !important;
+}
+
+.datatable thead th:last-child,
+table.dataTable thead th:last-child{
+    border-top-right-radius: 18px !important;
+    border-bottom-right-radius: 18px !important;
+}
+
+/* Satırlar ayrı kart gibi görünür */
+.datatable tbody tr{
+    background: transparent !important;
+    transition: transform .16s ease, filter .16s ease;
+}
+
+.datatable tbody tr > td,
+.table-striped > tbody > tr:nth-of-type(odd) > *,
+.table-striped > tbody > tr:nth-of-type(even) > *{
+    background: rgba(255,255,255,.90) !important;
+    color: var(--pin-ink) !important;
+    border-top: 1px solid rgba(111,92,255,.10) !important;
+    border-bottom: 1px solid rgba(111,92,255,.10) !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    padding: 12px 14px !important;
+    font-size: 13px;
+    line-height: 1.35;
+    vertical-align: middle;
+    box-shadow: 0 8px 18px rgba(16,24,40,.035);
+}
+
+.datatable tbody tr:nth-child(even) > td,
+.table-striped > tbody > tr:nth-of-type(even) > *{
+    background: linear-gradient(90deg, rgba(111,92,255,.055), rgba(255,255,255,.92)) !important;
+}
+
+.datatable tbody tr > td:first-child{
+    border-left: 1px solid rgba(111,92,255,.10) !important;
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 16px;
+    font-weight: 800;
+    color: #5b4ce6 !important;
+}
+
+.datatable tbody tr > td:last-child{
+    border-right: 1px solid rgba(111,92,255,.10) !important;
+    border-top-right-radius: 16px;
+    border-bottom-right-radius: 16px;
+}
+
+.datatable tbody tr:hover{
+    transform: translateY(-2px);
+    filter: saturate(1.04);
+}
+
+.datatable tbody tr:hover > td{
+    background: linear-gradient(90deg, rgba(111,92,255,.13), rgba(59,130,246,.08), rgba(255,255,255,.95)) !important;
+    border-color: rgba(111,92,255,.24) !important;
+    box-shadow: 0 14px 30px rgba(111,92,255,.13);
+}
+
+/* Person Explorer seçilen kişi satırı */
+.row-selectable tbody tr.table-active > td,
+#persons tbody tr.table-active > td{
+    background: linear-gradient(90deg, rgba(111,92,255,.22), rgba(236,72,153,.10)) !important;
+    color: #221b59 !important;
+    border-color: rgba(111,92,255,.32) !important;
+    box-shadow: 0 14px 34px rgba(111,92,255,.18);
+}
+
+/* ID kolonları küçük rozet gibi */
+#persons tbody td:first-child,
+#person_mentions tbody td:first-child,
+#entities_raw tbody td:first-child{
+    width: 70px;
+    text-align: center;
+}
+
+#persons tbody td:first-child::before,
+#person_mentions tbody td:first-child::before,
+#entities_raw tbody td:first-child::before{
+    content: "#";
+    opacity: .55;
+    margin-right: 1px;
+}
+
+/* Person isimlerini daha okunur yap */
+#persons tbody td:nth-child(2),
+#person_mentions tbody td:nth-child(4){
+    font-weight: 750;
+    letter-spacing: .01em;
+}
+
+#persons tbody td:nth-child(2){
+    text-transform: capitalize;
+}
+
+/* Alt bilgi ve pagination */
+.dataTables_wrapper .row:last-child,
+.dataTables_wrapper .dt-layout-row:last-child{
+    align-items: center;
+    margin-top: 12px !important;
+    padding-top: 10px;
+    border-top: 1px solid rgba(111,92,255,.10);
+}
+
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dt-info{
+    color: var(--pin-muted) !important;
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.pagination{
+    gap: 5px;
+}
+
+.pagination .page-link,
+.dataTables_wrapper .dataTables_paginate .paginate_button,
+.dt-paging-button{
+    border-radius: 12px !important;
+    border: 1px solid rgba(111,92,255,.16) !important;
+    background: rgba(255,255,255,.80) !important;
+    color: #5b4ce6 !important;
+    font-weight: 800 !important;
+    box-shadow: 0 6px 14px rgba(16,24,40,.05);
+    transition: .16s ease;
+}
+
+.pagination .page-link:hover,
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover,
+.dt-paging-button:hover{
+    background: rgba(111,92,255,.12) !important;
+    color: #3b2fbf !important;
+    transform: translateY(-1px);
+}
+
+.pagination .page-item.active .page-link,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dt-paging-button.current{
+    background: linear-gradient(135deg, #6f5cff, #8b5cf6) !important;
+    color: #ffffff !important;
+    border-color: transparent !important;
+    box-shadow: 0 10px 22px rgba(111,92,255,.26);
+}
+
+/* DataTables sort okları daha temiz */
+table.dataTable thead .sorting::before,
+table.dataTable thead .sorting::after,
+table.dataTable thead .sorting_asc::before,
+table.dataTable thead .sorting_asc::after,
+table.dataTable thead .sorting_desc::before,
+table.dataTable thead .sorting_desc::after{
+    color: rgba(255,255,255,.72) !important;
+    opacity: .9 !important;
+}
+
+/* Uzun metinlerde daha premium tooltip hissi */
+.has-tip{
+    cursor: help;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: rgba(111,92,255,.35);
+    text-underline-offset: 3px;
+}
+
+/* Dark mode uyumu */
+body.dark-mode{
+    --pin-bg: rgba(22,25,34,.78);
+    --pin-bg-solid: #161922;
+    --pin-ink: #f5f7fb;
+    --pin-muted: rgba(255,255,255,.64);
+    --pin-line: rgba(255,255,255,.09);
+    --pin-line-strong: rgba(139,92,246,.28);
+    --pin-soft: rgba(111,92,255,.15);
+    --pin-soft-2: rgba(59,130,246,.12);
+    --pin-head: #111522;
+}
+
+body.dark-mode .card .table-container,
+body.dark-mode .tab-pane > .table-container,
+body.dark-mode #list-person-explorer .table-container,
+body.dark-mode #list-entities-raw .table-container,
+body.dark-mode #list-docs .table-container{
+    background:
+        radial-gradient(circle at top left, rgba(111,92,255,.18), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(59,130,246,.13), transparent 28%),
+        rgba(22,25,34,.72);
+    border-color: rgba(255,255,255,.08);
+    box-shadow: 0 22px 54px rgba(0,0,0,.28);
+}
+
+body.dark-mode #list-person-explorer .card{
+    background: linear-gradient(180deg, rgba(22,25,34,.96), rgba(22,25,34,.82)) !important;
+    border-color: rgba(255,255,255,.08) !important;
+}
+
+body.dark-mode #list-person-explorer .card h5{
+    background: rgba(111,92,255,.18);
+    color: #ffffff;
+}
+
+body.dark-mode .dataTables_wrapper .dataTables_filter input,
+body.dark-mode .dataTables_wrapper .dt-search input,
+body.dark-mode .dataTables_wrapper .dataTables_length select,
+body.dark-mode .dataTables_wrapper .dt-length select{
+    background: rgba(255,255,255,.055) !important;
+    color: #ffffff !important;
+    border-color: rgba(139,92,246,.26) !important;
+}
+
+body.dark-mode .datatable tbody tr > td,
+body.dark-mode .table-striped > tbody > tr:nth-of-type(odd) > *,
+body.dark-mode .table-striped > tbody > tr:nth-of-type(even) > *{
+    background: rgba(255,255,255,.045) !important;
+    color: #eef2ff !important;
+    border-color: rgba(255,255,255,.075) !important;
+    box-shadow: 0 10px 22px rgba(0,0,0,.18);
+}
+
+body.dark-mode .datatable tbody tr:nth-child(even) > td,
+body.dark-mode .table-striped > tbody > tr:nth-of-type(even) > *{
+    background: linear-gradient(90deg, rgba(111,92,255,.13), rgba(255,255,255,.045)) !important;
+}
+
+body.dark-mode .datatable tbody tr > td:first-child{
+    color: #a99dff !important;
+}
+
+body.dark-mode .datatable tbody tr:hover > td{
+    background: linear-gradient(90deg, rgba(111,92,255,.24), rgba(59,130,246,.14), rgba(255,255,255,.055)) !important;
+    border-color: rgba(139,92,246,.32) !important;
+    box-shadow: 0 16px 36px rgba(111,92,255,.18);
+}
+
+body.dark-mode .row-selectable tbody tr.table-active > td,
+body.dark-mode #persons tbody tr.table-active > td{
+    background: linear-gradient(90deg, rgba(111,92,255,.34), rgba(236,72,153,.18)) !important;
+    color: #ffffff !important;
+}
+
+body.dark-mode .pagination .page-link,
+body.dark-mode .dataTables_wrapper .dataTables_paginate .paginate_button,
+body.dark-mode .dt-paging-button{
+    background: rgba(255,255,255,.055) !important;
+    border-color: rgba(255,255,255,.08) !important;
+    color: #c8c1ff !important;
+}
+
+body.dark-mode .pagination .page-item.active .page-link,
+body.dark-mode .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+body.dark-mode .dt-paging-button.current{
+    background: linear-gradient(135deg, #6f5cff, #8b5cf6) !important;
+    color: #ffffff !important;
+}
+
+/* Daha küçük ekranlarda kontroller alt alta ve temiz */
+@media (max-width: 768px){
+    .dataTables_wrapper .dataTables_filter,
+    .dataTables_wrapper .dt-search,
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dt-length{
+        text-align: left !important;
+        margin-top: 8px;
+    }
+
+    .dataTables_wrapper .dataTables_filter input,
+    .dataTables_wrapper .dt-search input{
+        min-width: 100%;
+        width: 100% !important;
+        margin-left: 0 !important;
+    }
+
+    .datatable tbody tr > td,
+    .table-striped > tbody > tr:nth-of-type(odd) > *,
+    .table-striped > tbody > tr:nth-of-type(even) > *{
+        padding: 10px 12px !important;
+        font-size: 12px;
+    }
+}
+
+
+/* =========================================================
+   FINAL COHESIVE PINTEREST / PROFESSIONAL THEME OVERRIDES
+   Tek tasarım dili: koyu lacivert + soft lavender + mavi/lila vurgu.
+   Yeşil sadece durum bilgisi için çok sınırlı kullanılır.
+   ========================================================= */
+:root{
+    --nx-bg: #f7f5ff;
+    --nx-bg-2: #eef4ff;
+    --nx-surface: rgba(255,255,255,.88);
+    --nx-surface-solid: #ffffff;
+    --nx-sidebar: #141827;
+    --nx-sidebar-2: #0f1320;
+    --nx-text: #171326;
+    --nx-muted: #736d82;
+    --nx-border: rgba(31, 27, 46, .09);
+    --nx-brand: #7c3aed;
+    --nx-brand-2: #5b7cfa;
+    --nx-brand-3: #2563eb;
+    --nx-accent: #ec4899;
+    --nx-soft-lilac: rgba(124,58,237,.11);
+    --nx-soft-blue: rgba(37,99,235,.10);
+    --nx-soft-pink: rgba(236,72,153,.10);
+    --nx-warning: #b7791f;
+    --nx-warning-soft: rgba(245,158,11,.12);
+    --nx-success: #0f766e;
+    --nx-success-soft: rgba(15,118,110,.10);
+    --nx-shadow: 0 18px 45px rgba(49,33,104,.10);
+    --nx-shadow-hover: 0 24px 56px rgba(83,54,178,.18);
+}
+
+body{
+    background:
+      radial-gradient(circle at 9% 8%, rgba(124,58,237,.11), transparent 28%),
+      radial-gradient(circle at 88% 16%, rgba(37,99,235,.10), transparent 28%),
+      linear-gradient(135deg, var(--nx-bg) 0%, var(--nx-bg-2) 100%) !important;
+    color: var(--nx-text) !important;
+}
+
+.text-primary{ color: var(--nx-brand) !important; }
+.text-muted{ color: var(--nx-muted) !important; }
+
+/* Sidebar */
+#sidebar-wrapper{
+    background:
+      radial-gradient(circle at top left, rgba(124,58,237,.32), transparent 34%),
+      linear-gradient(180deg, var(--nx-sidebar) 0%, var(--nx-sidebar-2) 100%) !important;
+    border-right: 1px solid rgba(255,255,255,.08) !important;
+    box-shadow: 16px 0 42px rgba(20,24,39,.18) !important;
+}
+.sidebar-heading{
+    background: rgba(255,255,255,.035) !important;
+    border-bottom: 1px solid rgba(255,255,255,.09) !important;
+    color: #ffffff !important;
+}
+.sidebar-tree-header,
+.list-group-item-action{
+    color: rgba(255,255,255,.72) !important;
+}
+.sidebar-tree-header:hover,
+.list-group-item-action:hover{
+    background: rgba(255,255,255,.07) !important;
+    color: #ffffff !important;
+}
+.sidebar-tree-header.active,
+.sidebar-tree-header[aria-expanded="true"]{
+    color: #ffffff !important;
+    background: linear-gradient(90deg, rgba(124,58,237,.24), transparent) !important;
+}
+.list-group-item-action.active{
+    color: #ffffff !important;
+    background: linear-gradient(135deg, var(--nx-brand), var(--nx-brand-2)) !important;
+    box-shadow: 0 14px 28px rgba(124,58,237,.28) !important;
+    border-radius: 14px !important;
+    margin: 4px 10px !important;
+    width: auto !important;
+}
+
+/* Hero */
+.hero-section{
+    background:
+      radial-gradient(circle at 18% 10%, rgba(255,255,255,.28), transparent 26%),
+      linear-gradient(135deg, #171326 0%, #3b2b88 45%, #2563eb 100%) !important;
+    border: 1px solid rgba(255,255,255,.18) !important;
+    border-radius: 28px !important;
+    box-shadow: 0 24px 60px rgba(49,33,104,.22) !important;
+}
+.hero-overlay{
+    background: radial-gradient(circle at top right, rgba(236,72,153,.18), rgba(0,0,0,.24)) !important;
+}
+
+/* Cards and metrics */
+.metric-card,
+.card,
+.table-container{
+    background: var(--nx-surface) !important;
+    border: 1px solid var(--nx-border) !important;
+    border-radius: 22px !important;
+    box-shadow: var(--nx-shadow) !important;
+    backdrop-filter: blur(14px);
+}
+.metric-card{
+    border-left: 0 !important;
+    position: relative;
+    overflow: hidden;
+}
+.metric-card::before{
+    content:"";
+    position:absolute;
+    inset:0 0 auto 0;
+    height:5px;
+    background: linear-gradient(90deg, var(--nx-brand), var(--nx-brand-2), var(--nx-accent));
+}
+.metric-card:hover{
+    transform: translateY(-6px) !important;
+    box-shadow: var(--nx-shadow-hover) !important;
+    border-left: 0 !important;
+}
+.metric-title{ color: var(--nx-muted) !important; }
+.metric-value{ color: var(--nx-text) !important; }
+.progress{
+    background: rgba(124,58,237,.08) !important;
+    border-radius: 999px !important;
+    overflow: hidden;
+}
+.progress-bar{
+    background: linear-gradient(90deg, var(--nx-brand), var(--nx-brand-2)) !important;
+}
+
+/* Buttons / pills */
+.btn-primary,
+.btn-nexus{
+    border: 0 !important;
+    color: #fff !important;
+    background: linear-gradient(135deg, var(--nx-brand), var(--nx-brand-2)) !important;
+    box-shadow: 0 14px 28px rgba(124,58,237,.24) !important;
+}
+.btn-primary:hover,
+.btn-nexus:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 18px 34px rgba(124,58,237,.32) !important;
+}
+.fen-pill,
+.chip-success{
+    color: var(--nx-success) !important;
+    background: var(--nx-success-soft) !important;
+    border-color: rgba(15,118,110,.20) !important;
+}
+
+/* Pinterest-style table system */
+.table-container{
+    padding: 14px !important;
+    overflow-x: auto !important;
+}
+.dataTables_wrapper,
+.dt-container{
+    color: var(--nx-text) !important;
+}
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate,
+.dt-container .dt-length,
+.dt-container .dt-search,
+.dt-container .dt-info,
+.dt-container .dt-paging{
+    color: var(--nx-muted) !important;
+    font-weight: 600;
+    font-size: 12px;
+}
+.dataTables_wrapper .dataTables_filter input,
+.dt-container .dt-search input,
+.dataTables_wrapper .dataTables_length select,
+.dt-container .dt-length select{
+    border: 1px solid rgba(124,58,237,.18) !important;
+    border-radius: 999px !important;
+    background: rgba(255,255,255,.75) !important;
+    box-shadow: 0 10px 22px rgba(49,33,104,.06) !important;
+    padding: 8px 12px !important;
+    color: var(--nx-text) !important;
+    outline: none !important;
+}
+.dataTables_wrapper .dataTables_filter input:focus,
+.dt-container .dt-search input:focus{
+    border-color: rgba(124,58,237,.45) !important;
+    box-shadow: 0 0 0 4px rgba(124,58,237,.09) !important;
+}
+
+.datatable{
+    width: 100% !important;
+    border-collapse: separate !important;
+    border-spacing: 0 10px !important;
+    background: transparent !important;
+}
+.datatable thead th,
+.table-dark th,
+#list-text_similarity .datatable thead th{
+    background: linear-gradient(135deg, #171326, #29213f) !important;
+    color: #f8fafc !important;
+    border: 0 !important;
+    font-size: 11px !important;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    padding: 12px 14px !important;
+}
+.datatable thead th:first-child{ border-radius: 15px 0 0 15px !important; }
+.datatable thead th:last-child{ border-radius: 0 15px 15px 0 !important; }
+.datatable tbody tr{
+    transition: transform .18s ease, filter .18s ease;
+}
+.datatable tbody tr > td,
+.table-striped > tbody > tr:nth-of-type(odd) > *,
+.table-striped > tbody > tr:nth-of-type(even) > *{
+    background: rgba(255,255,255,.78) !important;
+    border-top: 1px solid rgba(124,58,237,.07) !important;
+    border-bottom: 1px solid rgba(124,58,237,.07) !important;
+    color: var(--nx-text) !important;
+    padding: 12px 14px !important;
+    box-shadow: 0 10px 22px rgba(49,33,104,.055);
+}
+.datatable tbody tr > td:first-child{
+    border-left: 1px solid rgba(124,58,237,.07) !important;
+    border-radius: 16px 0 0 16px !important;
+    color: var(--nx-brand) !important;
+    font-weight: 800;
+}
+.datatable tbody tr > td:last-child{
+    border-right: 1px solid rgba(124,58,237,.07) !important;
+    border-radius: 0 16px 16px 0 !important;
+}
+.datatable tbody tr:nth-child(even) > td{
+    background: linear-gradient(90deg, rgba(124,58,237,.055), rgba(255,255,255,.80)) !important;
+}
+.datatable tbody tr:hover{
+    transform: translateY(-2px);
+}
+.datatable tbody tr:hover > td{
+    background: linear-gradient(90deg, rgba(124,58,237,.13), rgba(37,99,235,.08), rgba(255,255,255,.88)) !important;
+    border-color: rgba(124,58,237,.22) !important;
+    box-shadow: 0 18px 38px rgba(83,54,178,.13) !important;
+}
+.row-selectable tbody tr.table-active > td,
+#persons tbody tr.table-active > td{
+    background: linear-gradient(90deg, rgba(124,58,237,.18), rgba(236,72,153,.10)) !important;
+    border-color: rgba(124,58,237,.34) !important;
+    color: var(--nx-text) !important;
+}
+
+.pagination .page-link,
+.dataTables_wrapper .dataTables_paginate .paginate_button,
+.dt-paging-button{
+    border: 1px solid rgba(124,58,237,.13) !important;
+    border-radius: 999px !important;
+    background: rgba(255,255,255,.78) !important;
+    color: var(--nx-brand) !important;
+    margin: 0 3px !important;
+    font-weight: 800 !important;
+    box-shadow: 0 8px 18px rgba(49,33,104,.06);
+}
+.pagination .page-item.active .page-link,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dt-paging-button.current{
+    background: linear-gradient(135deg, var(--nx-brand), var(--nx-brand-2)) !important;
+    color: #fff !important;
+    border-color: transparent !important;
+}
+
+/* Dark mode cohesive */
+body.dark-mode{
+    --nx-bg: #0f1117;
+    --nx-bg-2: #151827;
+    --nx-surface: rgba(23,25,36,.92);
+    --nx-surface-solid: #171927;
+    --nx-text: #f5f7fb;
+    --nx-muted: rgba(245,247,251,.66);
+    --nx-border: rgba(255,255,255,.08);
+    background:
+      radial-gradient(circle at 12% 8%, rgba(124,58,237,.19), transparent 28%),
+      radial-gradient(circle at 88% 18%, rgba(37,99,235,.16), transparent 28%),
+      linear-gradient(135deg, var(--nx-bg), var(--nx-bg-2)) !important;
+    color: var(--nx-text) !important;
+}
+body.dark-mode .metric-card,
+body.dark-mode .card,
+body.dark-mode .table-container{
+    background: var(--nx-surface) !important;
+    border-color: var(--nx-border) !important;
+}
+body.dark-mode .datatable tbody tr > td,
+body.dark-mode .table-striped > tbody > tr:nth-of-type(odd) > *,
+body.dark-mode .table-striped > tbody > tr:nth-of-type(even) > *{
+    background: rgba(255,255,255,.045) !important;
+    color: #eef2ff !important;
+    border-color: rgba(255,255,255,.075) !important;
+}
+body.dark-mode .datatable tbody tr:nth-child(even) > td{
+    background: linear-gradient(90deg, rgba(124,58,237,.15), rgba(255,255,255,.045)) !important;
+}
+body.dark-mode .datatable tbody tr:hover > td{
+    background: linear-gradient(90deg, rgba(124,58,237,.25), rgba(37,99,235,.14), rgba(255,255,255,.06)) !important;
+}
+body.dark-mode .dataTables_wrapper .dataTables_filter input,
+body.dark-mode .dt-container .dt-search input,
+body.dark-mode .dataTables_wrapper .dataTables_length select,
+body.dark-mode .dt-container .dt-length select{
+    background: rgba(255,255,255,.06) !important;
+    color: #ffffff !important;
+    border-color: rgba(124,58,237,.28) !important;
+}
+body.dark-mode .fen-pill,
+body.dark-mode .chip-success{
+    color: #5eead4 !important;
+    background: rgba(45,212,191,.12) !important;
+    border-color: rgba(45,212,191,.20) !important;
+}
+
+
+/* =========================================================
+   BOARD / FEN PREVIEW OVERFLOW FIX - CARD-SAFE SLIDER
+   Bu blok özellikle pdf_detail.html içindeki board önizlemelerinin
+   kart dışına taşmasını engeller. Internal style çakışırsa !important
+   ile son söz burada olur.
+   ========================================================= */
+.section-box{
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+
+.card-body-x,
+.image-card,
+.review-card{
+    min-width: 0 !important;
+}
+
+.board-preview-grid{
+    display: flex !important;
+    grid-template-columns: none !important;
+    gap: 12px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    max-width: 100% !important;
+    padding: 2px 2px 10px !important;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+}
+
+.board-preview-card{
+    flex: 0 0 158px !important;
+    width: 158px !important;
+    min-width: 158px !important;
+    max-width: 158px !important;
+    border: 1px solid var(--nx-border, rgba(31,27,46,.09)) !important;
+    border-radius: 18px !important;
+    padding: 10px !important;
+    background: rgba(255,255,255,.58) !important;
+    box-shadow: 0 10px 24px rgba(49,33,104,.06) !important;
+    scroll-snap-align: start;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+}
+
+.board-preview-img{
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 1 / 1 !important;
+    object-fit: contain !important;
+    border-radius: 14px !important;
+    background: rgba(255,255,255,.72) !important;
+    margin-bottom: 9px !important;
+    display: block !important;
+}
+
+.board-meta{
+    font-size: 11px !important;
+    line-height: 1.42 !important;
+    color: var(--nx-muted, #736d82) !important;
+    margin-bottom: 8px !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+}
+
+.board-meta strong{
+    color: var(--nx-brand, #7c3aed) !important;
+    font-weight: 800 !important;
+}
+
+.fen-box{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+    font-size: 10px !important;
+    line-height: 1.45 !important;
+    padding: 8px !important;
+    border-radius: 12px !important;
+    background: rgba(31,27,46,.045) !important;
+    color: var(--nx-text, #171326) !important;
+    max-height: 74px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    margin-top: 6px !important;
+}
+
+.board-preview-grid::-webkit-scrollbar,
+.fen-box::-webkit-scrollbar,
+.modal-boards-grid::-webkit-scrollbar{
+    height: 8px;
+    width: 8px;
+}
+
+.board-preview-grid::-webkit-scrollbar-track,
+.fen-box::-webkit-scrollbar-track,
+.modal-boards-grid::-webkit-scrollbar-track{
+    background: rgba(124,58,237,.08);
+    border-radius: 999px;
+}
+
+.board-preview-grid::-webkit-scrollbar-thumb,
+.fen-box::-webkit-scrollbar-thumb,
+.modal-boards-grid::-webkit-scrollbar-thumb{
+    background: linear-gradient(135deg, rgba(124,58,237,.42), rgba(91,124,250,.42));
+    border-radius: 999px;
+}
+
+.board-preview-grid::-webkit-scrollbar-thumb:hover,
+.fen-box::-webkit-scrollbar-thumb:hover,
+.modal-boards-grid::-webkit-scrollbar-thumb:hover{
+    background: linear-gradient(135deg, rgba(124,58,237,.68), rgba(91,124,250,.68));
+}
+
+.board-preview-grid,
+.fen-box,
+.modal-boards-grid{
+    scrollbar-color: rgba(124,58,237,.45) rgba(124,58,237,.08);
+    scrollbar-width: thin;
+}
+
+/* Board bölümünde küçük yönlendirme metni */
+.board-scroll-hint{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: -2px 0 10px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(124,58,237,.08);
+    color: var(--nx-muted, #736d82);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* Modal içinde de boardlar taşmasın */
+.modal-boards-grid{
+    display: flex !important;
+    grid-template-columns: none !important;
+    gap: 14px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    max-width: 100% !important;
+    padding-bottom: 10px !important;
+    scroll-snap-type: x mandatory;
+}
+
+.modal-board-card{
+    flex: 0 0 220px !important;
+    width: 220px !important;
+    min-width: 220px !important;
+    max-width: 220px !important;
+    border-radius: 18px !important;
+    overflow: hidden !important;
+    scroll-snap-align: start;
+}
+
+.modal-board-img{
+    width: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    object-fit: contain !important;
+    border-radius: 14px !important;
+}
+
+body.dark-mode .board-preview-card,
+body.dark-mode .modal-board-card{
+    background: rgba(255,255,255,.045) !important;
+    border-color: rgba(255,255,255,.08) !important;
+    box-shadow: 0 12px 26px rgba(0,0,0,.20) !important;
+}
+
+body.dark-mode .fen-box{
+    background: rgba(255,255,255,.055) !important;
+    color: #eef2ff !important;
+}
+
+body.dark-mode .board-scroll-hint{
+    background: rgba(124,58,237,.18);
+    color: rgba(245,247,251,.72);
+}
+
+@media (max-width: 640px){
+    .board-preview-card{
+        flex-basis: 148px !important;
+        width: 148px !important;
+        min-width: 148px !important;
+        max-width: 148px !important;
+    }
+
+    .modal-board-card{
+        flex-basis: 190px !important;
+        width: 190px !important;
+        min-width: 190px !important;
+        max-width: 190px !important;
+    }
+}
+
+
+/* =========================================================
+   BOARD SLIDER WITH ARROWS FINAL OVERRIDE
+   Kart içindeki board alanını görünür oklarla yatay slider yapar.
+   ========================================================= */
+.board-slider-shell{
+    position:relative;
+    max-width:100%;
+    overflow:hidden;
+    border-radius:18px;
+}
+.board-preview-grid{
+    display:flex !important;
+    grid-template-columns:none !important;
+    gap:12px !important;
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
+    max-width:100% !important;
+    padding:2px 36px 12px !important;
+    scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;
+    scrollbar-color:rgba(124,58,237,.55) rgba(124,58,237,.08);
+}
+.board-preview-grid::-webkit-scrollbar{ height:8px; }
+.board-preview-grid::-webkit-scrollbar-track{
+    background:rgba(124,58,237,.08);
+    border-radius:999px;
+}
+.board-preview-grid::-webkit-scrollbar-thumb{
+    background:linear-gradient(90deg, #7c3aed, #8b5cf6);
+    border-radius:999px;
+}
+.board-slide-btn{
+    position:absolute;
+    top:50%;
+    transform:translateY(-50%);
+    z-index:5;
+    width:30px;
+    height:44px;
+    border:0;
+    border-radius:999px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#ffffff;
+    background:linear-gradient(135deg, #7c3aed, #5b7cfa);
+    box-shadow:0 12px 24px rgba(124,58,237,.25);
+    cursor:pointer;
+    transition:.18s ease;
+}
+.board-slide-btn:hover{
+    transform:translateY(-50%) scale(1.04);
+    box-shadow:0 16px 30px rgba(124,58,237,.34);
+}
+.board-slide-left{ left:0; }
+.board-slide-right{ right:0; }
+.board-preview-card{
+    flex:0 0 156px !important;
+    min-width:156px !important;
+    max-width:156px !important;
+    scroll-snap-align:start;
+    overflow:hidden;
+}
+.fen-box{
+    max-height:74px !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+}
+@media (max-width:640px){
+    .board-preview-card{
+        flex-basis:148px !important;
+        min-width:148px !important;
+        max-width:148px !important;
+    }
+}
+
+
+/* =========================================================
+   FINAL CARD EQUAL-HEIGHT + VERTICAL INNER SCROLL FIX
+   Amaç: tüm review kartları aynı boyda kalsın; uzun OCR/board/FEN alanları
+   kartın dışına taşmasın, kart içinde dikey kaydırılsın.
+   ========================================================= */
+:root{
+    --review-card-height: 780px;
+    --review-thumb-height: 220px;
+}
+
+.cards-grid{
+    align-items: stretch !important;
+}
+
+.image-card.review-card,
+.review-card{
+    height: var(--review-card-height) !important;
+    max-height: var(--review-card-height) !important;
+    min-height: var(--review-card-height) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+}
+
+.review-card .thumb-wrap{
+    flex: 0 0 var(--review-thumb-height) !important;
+    height: var(--review-thumb-height) !important;
+    min-height: var(--review-thumb-height) !important;
+    max-height: var(--review-thumb-height) !important;
+    overflow: hidden !important;
+}
+
+.review-card .thumb{
+    height: 100% !important;
+    max-height: calc(var(--review-thumb-height) - 24px) !important;
+    object-fit: contain !important;
+}
+
+.review-card .card-body-x{
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-right: 12px !important;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(124,58,237,.55) rgba(124,58,237,.08);
+}
+
+.review-card .card-body-x::-webkit-scrollbar{
+    width: 8px;
+}
+
+.review-card .card-body-x::-webkit-scrollbar-track{
+    background: rgba(124,58,237,.08);
+    border-radius: 999px;
+}
+
+.review-card .card-body-x::-webkit-scrollbar-thumb{
+    background: linear-gradient(180deg, #7c3aed, #8b5cf6);
+    border-radius: 999px;
+}
+
+.review-card .card-body-x::-webkit-scrollbar-thumb:hover{
+    background: linear-gradient(180deg, #6d28d9, #7c3aed);
+}
+
+.review-card .section-box{
+    flex: 0 0 auto !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+}
+
+/* OCR ve açıklama alanları kartı uzatmasın */
+.review-card .ocr-preview{
+    min-height: 76px !important;
+    max-height: 92px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-right: 8px;
+}
+
+.review-card .explain-preview{
+    min-height: 52px !important;
+    max-height: 78px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-right: 8px;
+}
+
+/* Board bölümü hem yatay hem dikey taşmayı engeller */
+.review-card .board-slider-shell{
+    max-height: 322px !important;
+    overflow: hidden !important;
+    border-radius: 18px;
+}
+
+.review-card .board-preview-grid{
+    max-height: 322px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    align-items: stretch !important;
+}
+
+.review-card .board-preview-card{
+    height: 300px !important;
+    min-height: 300px !important;
+    max-height: 300px !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.review-card .board-preview-img{
+    flex: 0 0 132px !important;
+    height: 132px !important;
+    min-height: 132px !important;
+    max-height: 132px !important;
+    object-fit: contain !important;
+}
+
+.review-card .board-meta{
+    flex: 0 0 auto !important;
+    max-height: 54px !important;
+    overflow: hidden !important;
+}
+
+.review-card .fen-box{
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+/* Buton kartın içinde en altta erişilebilir kalsın */
+.review-card .card-actions{
+    position: sticky !important;
+    bottom: -1px !important;
+    z-index: 8 !important;
+    margin-top: auto !important;
+    padding-top: 12px !important;
+    padding-bottom: 2px !important;
+    background: linear-gradient(180deg, rgba(255,255,255,0), var(--card) 38%, var(--card) 100%) !important;
+}
+
+body.dark-mode .review-card .card-actions{
+    background: linear-gradient(180deg, rgba(22,25,34,0), var(--card) 38%, var(--card) 100%) !important;
+}
+
+/* Daha küçük ekranlarda da aynı mantık, sadece yükseklik biraz esner */
+@media (max-width: 1400px){
+    :root{
+        --review-card-height: 740px;
+        --review-thumb-height: 205px;
+    }
+}
+
+@media (max-width: 992px){
+    :root{
+        --review-card-height: 720px;
+        --review-thumb-height: 200px;
+    }
+}
+
+@media (max-width: 640px){
+    :root{
+        --review-card-height: 700px;
+        --review-thumb-height: 190px;
+    }
+
+    .review-card .board-preview-card{
+        height: 292px !important;
+        min-height: 292px !important;
+        max-height: 292px !important;
+    }
+}
+
+/* =========================================================
+   ENTERPRISE TECHNOLOGY THEME OVERRIDE
+   Kurumsal satış demosu için: slate/navy + cyan/blue, düşük doygunluk,
+   daha keskin grid, daha az pastel, daha profesyonel veri ürünü görünümü.
+   ========================================================= */
+:root{
+    --ent-bg:#f8fafc;
+    --ent-bg-2:#eef2f7;
+    --ent-panel:#ffffff;
+    --ent-panel-2:#f9fbfd;
+    --ent-line:#d8e0ea;
+    --ent-line-strong:#b9c5d4;
+    --ent-text:#0f172a;
+    --ent-muted:#64748b;
+    --ent-heading:#020617;
+    --ent-navy:#0b1220;
+    --ent-navy-2:#111827;
+    --ent-blue:#2563eb;
+    --ent-cyan:#0891b2;
+    --ent-cyan-soft:rgba(8,145,178,.10);
+    --ent-blue-soft:rgba(37,99,235,.10);
+    --ent-success:#047857;
+    --ent-warning:#b45309;
+    --ent-danger:#b91c1c;
+    --ent-shadow:0 12px 28px rgba(15,23,42,.08);
+    --ent-shadow-strong:0 18px 42px rgba(15,23,42,.13);
+    --review-card-height: 760px;
+    --review-thumb-height: 210px;
+}
+
+body,
+body.dark-mode{
+    font-family:"Inter", "Poppins", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+body{
+    background:
+      linear-gradient(rgba(15,23,42,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(15,23,42,.035) 1px, transparent 1px),
+      radial-gradient(circle at 18% 4%, rgba(37,99,235,.08), transparent 26%),
+      linear-gradient(135deg, var(--ent-bg) 0%, var(--ent-bg-2) 100%) !important;
+    background-size: 32px 32px, 32px 32px, auto, auto !important;
+    color:var(--ent-text) !important;
+}
+
+body.dark-mode{
+    --ent-bg:#080d16;
+    --ent-bg-2:#0d1422;
+    --ent-panel:#101827;
+    --ent-panel-2:#111c2e;
+    --ent-line:rgba(148,163,184,.16);
+    --ent-line-strong:rgba(148,163,184,.26);
+    --ent-text:#e5edf8;
+    --ent-muted:#94a3b8;
+    --ent-heading:#f8fafc;
+    --ent-shadow:0 14px 32px rgba(0,0,0,.28);
+    --ent-shadow-strong:0 22px 48px rgba(0,0,0,.36);
+    background:
+      linear-gradient(rgba(148,163,184,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148,163,184,.045) 1px, transparent 1px),
+      radial-gradient(circle at 20% 6%, rgba(37,99,235,.13), transparent 28%),
+      linear-gradient(135deg, var(--ent-bg) 0%, var(--ent-bg-2) 100%) !important;
+    background-size: 34px 34px, 34px 34px, auto, auto !important;
+}
+
+/* Ana dashboard sidebar */
+#sidebar-wrapper{
+    background:linear-gradient(180deg, #07111f 0%, #0b1220 100%) !important;
+    border-right:1px solid rgba(148,163,184,.16) !important;
+    box-shadow:18px 0 40px rgba(2,6,23,.22) !important;
+}
+.sidebar-heading{
+    background:rgba(15,23,42,.72) !important;
+    color:#f8fafc !important;
+    border-bottom:1px solid rgba(148,163,184,.14) !important;
+    letter-spacing:.06em !important;
+}
+.sidebar-tree-header,
+.list-group-item-action{
+    color:rgba(226,232,240,.74) !important;
+    border-radius:10px !important;
+}
+.sidebar-tree-header:hover,
+.sidebar-tree-header.active,
+.sidebar-tree-header[aria-expanded="true"],
+.list-group-item-action:hover{
+    background:rgba(8,145,178,.11) !important;
+    color:#e0f2fe !important;
+}
+.list-group-item-action.active{
+    background:linear-gradient(135deg, #0e7490, #2563eb) !important;
+    color:#ffffff !important;
+    box-shadow:0 12px 28px rgba(37,99,235,.24) !important;
+}
+
+/* Sayfa hero: pastel yerine kurumsal teknoloji banner */
+.hero-section,
+.hero{
+    background:
+      linear-gradient(90deg, rgba(8,145,178,.18), transparent 34%),
+      linear-gradient(135deg, #07111f 0%, #0f172a 54%, #1e3a8a 100%) !important;
+    border:1px solid rgba(148,163,184,.24) !important;
+    border-radius:18px !important;
+    color:#f8fafc !important;
+    box-shadow:0 18px 48px rgba(15,23,42,.20) !important;
+}
+.hero::before,
+.hero-section::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    background:
+      linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+    background-size:28px 28px;
+    mask-image:linear-gradient(90deg, rgba(0,0,0,.75), transparent 75%);
+}
+.hero-overlay{ background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.18)) !important; }
+.hero-title{ color:#f8fafc !important; text-shadow:none !important; letter-spacing:-.03em !important; }
+.hero-subtitle,
+.hero-sub{ color:#cbd5e1 !important; }
+.theme-wrap .label{ color:#cbd5e1 !important; }
+
+/* Paneller */
+.metric,
+.metric-card,
+.card,
+.filter-panel,
+.search-panel,
+.image-card,
+.modal-content,
+.section-box,
+.kv,
+.mini-stat,
+.board-preview-card,
+.modal-board-card,
+.table-container{
+    background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(249,251,253,.96)) !important;
+    border:1px solid var(--ent-line) !important;
+    border-radius:16px !important;
+    box-shadow:var(--ent-shadow) !important;
+    backdrop-filter:none !important;
+}
+body.dark-mode .metric,
+body.dark-mode .metric-card,
+body.dark-mode .card,
+body.dark-mode .filter-panel,
+body.dark-mode .search-panel,
+body.dark-mode .image-card,
+body.dark-mode .modal-content,
+body.dark-mode .section-box,
+body.dark-mode .kv,
+body.dark-mode .mini-stat,
+body.dark-mode .board-preview-card,
+body.dark-mode .modal-board-card,
+body.dark-mode .table-container{
+    background:linear-gradient(180deg, rgba(16,24,39,.98), rgba(17,28,46,.94)) !important;
+    border-color:var(--ent-line) !important;
+}
+.metric::before,
+.metric-card::before,
+.image-card::before,
+#list-person-explorer .card::before{
+    background:linear-gradient(90deg, var(--ent-cyan), var(--ent-blue)) !important;
+    height:3px !important;
+    opacity:1 !important;
+}
+.metric:hover,
+.metric-card:hover,
+.card:hover,
+.image-card:hover{
+    transform:translateY(-3px) !important;
+    box-shadow:var(--ent-shadow-strong) !important;
+}
+.metric .k,
+.metric-title,
+.subtle,
+.mini-stat .k,
+.kv .k,
+.board-meta,
+.text-muted{ color:var(--ent-muted) !important; }
+.metric .v,
+.metric-value,
+.page-title,
+.panel-title,
+.card-title,
+.section-title,
+.hero-title,
+h1,h2,h3,h4,h5{ color:var(--ent-heading); }
+body.dark-mode .metric .v,
+body.dark-mode .metric-value,
+body.dark-mode .page-title,
+body.dark-mode .panel-title,
+body.dark-mode .card-title,
+body.dark-mode .section-title,
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode h4,
+body.dark-mode h5{ color:var(--ent-heading) !important; }
+
+/* Üst özet kartları daha dashboard gibi */
+.summary-grid{ gap:14px !important; }
+.metric{ padding:16px !important; min-height:92px; }
+.metric .k{ text-transform:uppercase; letter-spacing:.05em; font-size:11px !important; }
+.metric .v{ font-size:26px !important; letter-spacing:-.03em; }
+
+/* Formlar ve filtreler */
+.form-control,
+.form-select,
+.dataTables_wrapper .dataTables_filter input,
+.dt-container .dt-search input,
+.dataTables_wrapper .dataTables_length select,
+.dt-container .dt-length select{
+    background:var(--ent-panel) !important;
+    border:1px solid var(--ent-line-strong) !important;
+    color:var(--ent-text) !important;
+    border-radius:10px !important;
+    box-shadow:none !important;
+}
+.form-control:focus,
+.form-select:focus,
+.dataTables_wrapper .dataTables_filter input:focus,
+.dt-container .dt-search input:focus{
+    border-color:var(--ent-cyan) !important;
+    box-shadow:0 0 0 3px rgba(8,145,178,.13) !important;
+}
+.filter-btn{
+    border-radius:10px !important;
+    border-color:var(--ent-line) !important;
+    font-weight:700 !important;
+}
+.filter-btn:hover,
+.filter-btn.active{
+    background:rgba(8,145,178,.10) !important;
+    border-color:rgba(8,145,178,.32) !important;
+    color:var(--ent-heading) !important;
+    box-shadow:none !important;
+}
+
+/* Butonlar: mor yerine teknoloji mavisi */
+.btn-primary,
+.btn-nexus,
+.card-actions .btn{
+    background:linear-gradient(135deg, #0e7490, #2563eb) !important;
+    border:0 !important;
+    color:#fff !important;
+    border-radius:12px !important;
+    box-shadow:0 12px 24px rgba(37,99,235,.20) !important;
+    font-weight:800 !important;
+}
+.btn-primary:hover,
+.btn-nexus:hover,
+.card-actions .btn:hover{
+    transform:translateY(-2px) !important;
+    box-shadow:0 16px 32px rgba(37,99,235,.26) !important;
+}
+.btn-outline-secondary{
+    border-color:var(--ent-line-strong) !important;
+    color:var(--ent-muted) !important;
+    background:transparent !important;
+}
+
+/* Chip ve badge sistemi */
+.chip,
+.badge-float,
+.score-pill,
+.fen-pill,
+.board-scroll-hint{
+    border-radius:999px !important;
+    box-shadow:none !important;
+    background:#f1f5f9 !important;
+    border:1px solid var(--ent-line-strong) !important;
+    color:#334155 !important;
+    font-weight:800 !important;
+}
+body.dark-mode .chip,
+body.dark-mode .badge-float,
+body.dark-mode .score-pill,
+body.dark-mode .fen-pill,
+body.dark-mode .board-scroll-hint{
+    background:rgba(148,163,184,.10) !important;
+    border-color:rgba(148,163,184,.20) !important;
+    color:#cbd5e1 !important;
+}
+.chip-success,
+.label-person{ background:rgba(4,120,87,.10) !important; color:var(--ent-success) !important; border-color:rgba(4,120,87,.22) !important; }
+.chip-brand,
+.label-game_notation{ background:rgba(37,99,235,.10) !important; color:#1d4ed8 !important; border-color:rgba(37,99,235,.22) !important; }
+.label-logo{ background:rgba(180,83,9,.10) !important; color:var(--ent-warning) !important; border-color:rgba(180,83,9,.22) !important; }
+.label-unknown{ background:#f1f5f9 !important; color:#475569 !important; border-color:#cbd5e1 !important; }
+
+/* Kart görselleri */
+.thumb-wrap{
+    background:
+      linear-gradient(135deg, #f8fafc, #eef2f7) !important;
+    border-bottom:1px solid var(--ent-line) !important;
+}
+body.dark-mode .thumb-wrap{ background:linear-gradient(135deg, #0f172a, #111c2e) !important; }
+.thumb,
+.board-preview-img,
+.modal-board-img,
+.detail-image{
+    background:#ffffff !important;
+    border:1px solid var(--ent-line) !important;
+    border-radius:12px !important;
+}
+body.dark-mode .thumb,
+body.dark-mode .board-preview-img,
+body.dark-mode .modal-board-img,
+body.dark-mode .detail-image{ background:#0b1220 !important; }
+
+/* Eşit yükseklik ve profesyonel scroll */
+.image-card.review-card{
+    height:var(--review-card-height) !important;
+    max-height:var(--review-card-height) !important;
+    overflow:hidden !important;
+}
+.review-card .thumb-wrap{
+    height:var(--review-thumb-height) !important;
+    min-height:var(--review-thumb-height) !important;
+}
+.review-card .thumb{
+    height:100% !important;
+    max-height:calc(var(--review-thumb-height) - 24px) !important;
+}
+.review-card .card-body-x{
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    padding-right:12px !important;
+    scrollbar-width:thin;
+    scrollbar-color:rgba(8,145,178,.55) rgba(148,163,184,.13);
+}
+.review-card .card-body-x::-webkit-scrollbar,
+.board-preview-grid::-webkit-scrollbar,
+.fen-box::-webkit-scrollbar{
+    width:8px;
+    height:8px;
+}
+.review-card .card-body-x::-webkit-scrollbar-track,
+.board-preview-grid::-webkit-scrollbar-track,
+.fen-box::-webkit-scrollbar-track{
+    background:rgba(148,163,184,.14);
+    border-radius:999px;
+}
+.review-card .card-body-x::-webkit-scrollbar-thumb,
+.board-preview-grid::-webkit-scrollbar-thumb,
+.fen-box::-webkit-scrollbar-thumb{
+    background:#64748b !important;
+    border-radius:999px;
+}
+.review-card .card-actions{
+    background:linear-gradient(180deg, rgba(255,255,255,0), var(--ent-panel) 42%, var(--ent-panel) 100%) !important;
+}
+body.dark-mode .review-card .card-actions{
+    background:linear-gradient(180deg, rgba(16,24,39,0), var(--ent-panel) 42%, var(--ent-panel) 100%) !important;
+}
+
+/* Board slider: daha ciddi, küçük oklar */
+.board-slider-shell{ border:1px solid var(--ent-line) !important; background:rgba(248,250,252,.65); }
+body.dark-mode .board-slider-shell{ background:rgba(15,23,42,.55); }
+.board-preview-grid{
+    scrollbar-color:#64748b rgba(148,163,184,.14) !important;
+}
+.board-slide-btn{
+    width:28px !important;
+    height:52px !important;
+    border-radius:10px !important;
+    background:rgba(15,23,42,.86) !important;
+    color:#e2e8f0 !important;
+    border:1px solid rgba(148,163,184,.24) !important;
+    box-shadow:0 10px 20px rgba(15,23,42,.18) !important;
+}
+.board-slide-btn:hover{ background:#0e7490 !important; }
+.fen-box{
+    background:#f1f5f9 !important;
+    color:#0f172a !important;
+    border:1px solid #d8e0ea !important;
+    font-size:10px !important;
+}
+body.dark-mode .fen-box{ background:#0b1220 !important; color:#cbd5e1 !important; border-color:rgba(148,163,184,.18) !important; }
+
+/* DataTables daha kurumsal */
+.datatable thead th,
+.table-dark th,
+#list-text_similarity .datatable thead th{
+    background:linear-gradient(135deg, #0b1220, #111827) !important;
+    color:#e2e8f0 !important;
+    letter-spacing:.06em !important;
+    text-transform:uppercase !important;
+    border:0 !important;
+}
+.datatable tbody tr > td,
+.table-striped > tbody > tr:nth-of-type(odd) > *,
+.table-striped > tbody > tr:nth-of-type(even) > *{
+    background:var(--ent-panel) !important;
+    color:var(--ent-text) !important;
+    border-color:var(--ent-line) !important;
+    box-shadow:none !important;
+}
+.datatable tbody tr:nth-child(even) > td{ background:var(--ent-panel-2) !important; }
+.datatable tbody tr:hover > td{
+    background:rgba(8,145,178,.075) !important;
+    border-color:rgba(8,145,178,.24) !important;
+    box-shadow:0 10px 22px rgba(15,23,42,.08) !important;
+}
+.datatable tbody tr > td:first-child{ color:var(--ent-cyan) !important; }
+.pagination .page-link,
+.dataTables_wrapper .dataTables_paginate .paginate_button,
+.dt-paging-button{
+    border-radius:8px !important;
+    background:var(--ent-panel) !important;
+    color:var(--ent-cyan) !important;
+    border-color:var(--ent-line) !important;
+    box-shadow:none !important;
+}
+.pagination .page-item.active .page-link,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dt-paging-button.current{
+    background:#0e7490 !important;
+    color:#fff !important;
+}
+
+@media (max-width:1400px){
+    :root{ --review-card-height:740px; --review-thumb-height:200px; }
+}
+@media (max-width:992px){
+    :root{ --review-card-height:720px; --review-thumb-height:195px; }
+}
